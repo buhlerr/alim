@@ -17,6 +17,23 @@ function quoteIdent(name: string): string {
   return `"${name}"`;
 }
 
+/**
+ * Escape a string as a PostgreSQL string literal.
+ *
+ * The PASSWORD clause of CREATE/ALTER ROLE is a utility statement whose grammar
+ * requires a literal string constant — bind parameters ($1) are rejected with a
+ * syntax error (42601). So the password must be interpolated as an escaped
+ * literal: single quotes are doubled, and the E'' form is used when a backslash
+ * is present. Mirrors Postgres's own quote_literal().
+ */
+function quoteLiteral(value: string): string {
+  const escaped = value.replace(/'/g, "''");
+  if (escaped.includes("\\")) {
+    return `E'${escaped.replace(/\\/g, "\\\\")}'`;
+  }
+  return `'${escaped}'`;
+}
+
 /** Map a thrown pg error into a friendly, password-free message. */
 function friendlyError(err: unknown): ProvisioningError {
   const e = err as { code?: string; message?: string };
@@ -169,14 +186,12 @@ export class PostgresProvisioner implements Provisioner {
         if (role.rowCount && role.rowCount > 0) {
           userExisted = true;
           await client.query(
-            `ALTER USER ${quoteIdent(username)} WITH LOGIN PASSWORD $1`,
-            [password],
+            `ALTER USER ${quoteIdent(username)} WITH LOGIN PASSWORD ${quoteLiteral(password)}`,
           );
           steps.push({ step: `user ${username}`, status: "updated" });
         } else {
           await client.query(
-            `CREATE USER ${quoteIdent(username)} WITH LOGIN PASSWORD $1`,
-            [password],
+            `CREATE USER ${quoteIdent(username)} WITH LOGIN PASSWORD ${quoteLiteral(password)}`,
           );
           steps.push({ step: `user ${username}`, status: "created" });
         }
