@@ -1,0 +1,55 @@
+# DB Provisioner — docker-compose
+#
+# Local/self-hosted stack: the app plus its own metadata database. The three
+# PostgreSQL servers you provision INTO are external and configured via the
+# POSTGRES_*_URL variables (they are NOT defined here).
+#
+# Coolify note: Coolify can build straight from the Dockerfile. If you let
+# Coolify manage the metadata Postgres as a separate resource, you only need
+# the `app` service below — point DATABASE_URL at the managed database.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # App's own metadata database (the bundled `appdb` service).
+      DATABASE_URL: "postgresql://dbprovisioner:${APPDB_PASSWORD:-dbprovisioner}@appdb:5432/dbprovisioner?schema=public"
+      # Admin connection strings for the servers you provision into.
+      POSTGRES_PROD_URL: "${POSTGRES_PROD_URL:-}"
+      POSTGRES_STAGING_URL: "${POSTGRES_STAGING_URL:-}"
+      POSTGRES_DEV_URL: "${POSTGRES_DEV_URL:-}"
+      # Optional: enables the future encrypted-settings store.
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:-}"
+      PROVISIONED_BY: "${PROVISIONED_BY:-internal-admin}"
+    depends_on:
+      appdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  appdb:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dbprovisioner
+      POSTGRES_PASSWORD: "${APPDB_PASSWORD:-dbprovisioner}"
+      POSTGRES_DB: dbprovisioner
+    volumes:
+      - appdb-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbprovisioner -d dbprovisioner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  appdb-data:

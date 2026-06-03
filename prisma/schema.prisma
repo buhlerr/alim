@@ -1,0 +1,60 @@
+// DB Provisioner — Prisma schema
+//
+// This database is the application's OWN metadata store. It is separate from the
+// PostgreSQL servers the app provisions into (those are reached via the
+// POSTGRES_*_URL admin connection strings).
+//
+// IMPORTANT: passwords are NEVER stored here. See ProvisionedDatabase.
+
+generator client {
+  provider      = "prisma-client-js"
+  // `native` for local dev; the debian target matches the node:20-bookworm-slim
+  // base image used in the Dockerfile / Coolify deploy.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Environment {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
+/// One row per (database, server) the app has provisioned.
+model ProvisionedDatabase {
+  id              String      @id @default(cuid())
+  applicationName String      @map("application_name")
+  environment     Environment
+  databaseName    String      @map("database_name")
+  username        String
+  host            String
+  // Passwords are intentionally NOT stored. The connection string with a
+  // password is shown exactly once, on the creation success screen.
+  createdAt       DateTime    @default(now()) @map("created_at")
+  createdBy       String      @default("system") @map("created_by")
+  notes           String?
+
+  // A given database name is unique per environment/host pairing.
+  @@unique([environment, host, databaseName], name: "env_host_db")
+  @@index([applicationName])
+  @@index([databaseName])
+  @@index([username])
+  @@map("provisioned_databases")
+}
+
+/// Future-ready: encrypted key/value settings (e.g. editable connection
+/// strings, Coolify tokens). Not wired into the runtime in v1 — connection
+/// strings are sourced from environment variables — but the table and the
+/// AES-256-GCM crypto helper exist so this can be enabled without a migration
+/// rewrite. Values are stored encrypted via `src/lib/crypto.ts`.
+model Setting {
+  key            String   @id
+  encryptedValue String   @map("encrypted_value")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
