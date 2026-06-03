@@ -46,6 +46,39 @@ model ProvisionedDatabase {
   @@map("provisioned_databases")
 }
 
+/// One row per executed SQL Console query. Stores metadata only — never
+/// connection strings or passwords. The query text itself IS stored so admins
+/// can review/re-run from history.
+model QueryHistory {
+  id              String      @id @default(cuid())
+  environment     Environment
+  databaseName    String      @map("database_name")
+  query           String
+  queryType       String      @map("query_type")
+  executionTimeMs Int?        @map("execution_time_ms")
+  success         Boolean
+  errorMessage    String?     @map("error_message")
+  executedAt      DateTime    @default(now()) @map("executed_at")
+
+  @@index([executedAt])
+  @@index([environment])
+  @@map("query_history")
+}
+
+/// User-saved queries that appear in the console sidebar (alongside the
+/// built-in admin query library).
+model SavedQuery {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  query       String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("saved_queries")
+}
+
 /// Future-ready: encrypted key/value settings (e.g. editable connection
 /// strings, Coolify tokens). Not wired into the runtime in v1 — connection
 /// strings are sourced from environment variables — but the table and the

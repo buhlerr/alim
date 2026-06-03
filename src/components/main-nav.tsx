@@ -7,6 +7,7 @@ import {
   ListChecks,
   PlusCircle,
   Settings,
+  TerminalSquare,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/create", label: "Create", icon: PlusCircle },
   { href: "/registry", label: "Registry", icon: ListChecks },
+  { href: "/query", label: "Query", icon: TerminalSquare },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

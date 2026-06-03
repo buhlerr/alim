@@ -31,6 +31,22 @@ Development) from a single admin dashboard.
 - **View details** — environment, database, username, host, creation date.
 - **Settings** — read-only status of each server target with a "Test
   connection" button. (Targets are configured via environment variables.)
+- **SQL Query Console** (`/query`) — a lightweight embedded pgAdmin:
+  - CodeMirror editor with PostgreSQL syntax highlighting; Execute / Explain /
+    Format (via `sql-formatter`) / Clear.
+  - Environment + database selectors (databases are listed live from the
+    server). Connection strings are never exposed.
+  - **Safety:** reads (SELECT/EXPLAIN/SHOW) run immediately; writes (INSERT/
+    UPDATE/DELETE/DROP/TRUNCATE/ALTER/GRANT/REVOKE/…) require a confirmation
+    modal where you type `CONFIRM` and see the target environment + database.
+    Production writes can be hard-disabled via `POSTGRES_PROD_READONLY`.
+  - **Results:** sortable table with client-side search, pagination, copy
+    (TSV), and CSV / JSON export; shows rows, execution time, database, env.
+  - **History** (`query_history`) and **Saved queries** (`saved_queries`) plus
+    a built-in admin query library, all in the sidebar.
+  - **Admin dashboard:** server overview (databases, roles, connections,
+    version, uptime), storage (database & table sizes), and performance
+    (active queries, long-running queries, waiting locks).
 
 ### Security
 
@@ -67,10 +83,16 @@ src/
 │   ├── provisioning/
 │   │   ├── types.ts      # Provisioner interface (future: MySQL, Redis)
 │   │   └── postgres.ts   # idempotent CREATE USER / DATABASE / GRANT
-│   └── registry.ts       # CRUD over provisioned_databases
+│   ├── registry.ts       # CRUD over provisioned_databases
+│   └── query/            # SQL Console service layer (engine-agnostic)
+│       ├── types.ts      # QueryEngine interface (future: MySQL/Redis/Mongo…)
+│       ├── postgres.ts   # execute / explain / listDatabases / overview
+│       ├── admin.ts      # admin-dashboard stat queries
+│       ├── history.ts    # query_history
+│       └── saved.ts      # saved_queries
 ├── app/
-│   ├── actions/          # server actions
-│   ├── dashboard/  create/  registry/  settings/
+│   ├── actions/          # server actions (provision, query, …)
+│   ├── dashboard/  create/  registry/  query/  settings/
 │   └── api/health/       # liveness probe
 └── components/           # shadcn/ui + feature components
 ```
@@ -92,6 +114,7 @@ Copy `.env.example` to `.env` and fill in:
 | `POSTGRES_PROD_URL` | — | Admin (superuser) connection string for the **Production** server. |
 | `POSTGRES_STAGING_URL` | — | Admin connection string for the **Staging** server. |
 | `POSTGRES_DEV_URL` | — | Admin connection string for the **Development** server. |
+| `POSTGRES_PROD_READONLY` | — | If truthy (`1`/`true`/`yes`/`on`), the SQL Console blocks all writes against Production. |
 | `ENCRYPTION_KEY` | — | 32-byte key (base64 or hex) for the future encrypted-settings store. |
 | `PROVISIONED_BY` | — | Audit label recorded against provisioning actions. |
 

@@ -95,3 +95,13 @@ export function getTargetInfo(environment: Environment): TargetInfo {
 export function getAllTargetInfo(): TargetInfo[] {
   return ENVIRONMENTS.map(getTargetInfo);
 }
+
+/**
+ * Whether write operations are hard-disabled on Production. Controlled by the
+ * POSTGRES_PROD_READONLY env var (truthy values: "1", "true", "yes", "on").
+ * Used by the SQL Console policy to block writes against Production entirely.
+ */
+export function isProdWritesDisabled(): boolean {
+  const raw = process.env.POSTGRES_PROD_READONLY?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
