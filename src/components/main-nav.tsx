@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Database,
   LayoutDashboard,
   ListChecks,
   PlusCircle,
@@ -23,11 +22,18 @@ export function MainNav() {
   const pathname = usePathname();
   return (
     <aside className="hidden w-60 shrink-0 border-r bg-card md:flex md:flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <Database className="h-5 w-5 text-primary" />
-        <div className="leading-tight">
-          <p className="text-sm font-semibold">DB Provisioner</p>
-          <p className="text-[11px] text-muted-foreground">Aspyre Labs</p>
+      <div className="flex flex-col items-start gap-2.5 border-b px-5 py-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/aspyrelabs-logo.svg"
+          alt="Aspyrelabs"
+          className="w-full max-w-[200px]"
+        />
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d]" />
+          <span className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text text-[13px] font-semibold uppercase tracking-[0.18em] text-transparent">
+            DB Provisioner
+          </span>
         </div>
       </div>
       <nav className="flex-1 space-y-1 p-3">
@@ -53,7 +59,7 @@ export function MainNav() {
         })}
       </nav>
       <div className="border-t p-4 text-[11px] text-muted-foreground">
-        Internal tool · v1
+        DB Provisioner v1.0
       </div>
     </aside>
   );
