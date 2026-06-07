@@ -6,6 +6,7 @@ import { CheckCircle2, History, Loader2, RefreshCw, XCircle } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EnvironmentBadge } from "@/components/environment-badge";
+import type { EnvironmentSummary } from "@/lib/environments";
 import { recentHistoryAction, type HistoryDTO } from "@/app/actions/query";
 
 export interface QueryHistoryHandle {
@@ -14,10 +15,14 @@ export interface QueryHistoryHandle {
 
 export const QueryHistoryPanel = React.forwardRef<
   QueryHistoryHandle,
-  { initial: HistoryDTO[]; onLoad: (query: string) => void }
->(function QueryHistoryPanel({ initial, onLoad }, ref) {
+  { initial: HistoryDTO[]; environments: EnvironmentSummary[]; onLoad: (query: string) => void }
+>(function QueryHistoryPanel({ initial, environments, onLoad }, ref) {
   const [rows, setRows] = React.useState<HistoryDTO[]>(initial);
   const [loading, setLoading] = React.useState(false);
+  const envByKey = React.useMemo(
+    () => new Map(environments.map((e) => [e.key, e])),
+    [environments],
+  );
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -66,7 +71,10 @@ export const QueryHistoryPanel = React.forwardRef<
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <EnvironmentBadge
-                    environment={{ name: r.environment, color: "slate" }}
+                    environment={{
+                      name: envByKey.get(r.environment)?.name ?? r.environment,
+                      color: envByKey.get(r.environment)?.color ?? "slate",
+                    }}
                   />
                   <Badge variant="outline" className="font-mono text-[10px]">
                     {r.queryType}

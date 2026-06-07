@@ -1,10 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { QueryConsole } from "@/components/query/query-console";
-import {
-  getAllTargetInfo,
-  isProdWritesDisabled,
-  type Environment,
-} from "@/lib/targets";
+import { getAllTargetInfo, type Environment } from "@/lib/targets";
+import { environmentsService } from "@/services/environments";
+import { toSummary } from "@/lib/environments";
 import { savedQueryService } from "@/services/query/saved";
 import { historyService } from "@/services/query/history";
 
@@ -19,6 +17,8 @@ export default async function QueryPage() {
     },
     {} as Record<Environment, boolean>,
   );
+
+  const environments = (await environmentsService.list()).map(toSummary);
 
   const [savedRows, historyRows] = await Promise.all([
     savedQueryService.list(),
@@ -52,7 +52,7 @@ export default async function QueryPage() {
       />
       <QueryConsole
         configured={configured}
-        prodWritesDisabled={isProdWritesDisabled()}
+        environments={environments}
         initialSaved={initialSaved}
         initialHistory={initialHistory}
       />

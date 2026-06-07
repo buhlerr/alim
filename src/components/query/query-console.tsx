@@ -31,11 +31,7 @@ import {
   type QueryHistoryHandle,
 } from "@/components/query/query-history";
 import { AdminDashboard } from "@/components/query/admin-dashboard";
-import {
-  ENVIRONMENT_LABELS,
-  ENVIRONMENTS,
-  type Environment,
-} from "@/lib/environments";
+import type { Environment, EnvironmentSummary } from "@/lib/environments";
 import { classifyQuery } from "@/lib/sql-classify";
 import { evaluatePolicy } from "@/lib/query-policy";
 import {
@@ -59,16 +55,16 @@ const PLACEHOLDER = "-- Write SQL here. SELECT/EXPLAIN/SHOW run immediately;\n--
 
 export function QueryConsole({
   configured,
-  prodWritesDisabled,
+  environments,
   initialSaved,
   initialHistory,
 }: {
   configured: Record<Environment, boolean>;
-  prodWritesDisabled: boolean;
+  environments: EnvironmentSummary[];
   initialSaved: SavedQueryDTO[];
   initialHistory: HistoryDTO[];
 }) {
-  const firstConfigured = ENVIRONMENTS.find((e) => configured[e]) ?? "DEVELOPMENT";
+  const firstConfigured = environments.find((e) => configured[e.key])?.key ?? environments[0]?.key ?? "";
   const [environment, setEnvironment] = React.useState<Environment>(firstConfigured);
   const [databases, setDatabases] = React.useState<string[]>([]);
   const [database, setDatabase] = React.useState<string>("");
@@ -118,10 +114,11 @@ export function QueryConsole({
     () => classifyQuery(stripPlaceholder(query)),
     [query],
   );
+  const selectedEnv = environments.find((e) => e.key === environment);
   const policy = evaluatePolicy({
-    environment,
     category: classification.category,
-    prodWritesDisabled,
+    readOnly: selectedEnv?.readOnly ?? false,
+    requireWriteConfirm: selectedEnv?.requireWriteConfirm ?? true,
   });
 
   const canRun = configured[environment] && Boolean(database) && !running;
@@ -234,10 +231,10 @@ export function QueryConsole({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ENVIRONMENTS.map((env) => (
-                <SelectItem key={env} value={env} disabled={!configured[env]}>
-                  {ENVIRONMENT_LABELS[env]}
-                  {!configured[env] ? " — not configured" : ""}
+              {environments.map((env) => (
+                <SelectItem key={env.key} value={env.key} disabled={!configured[env.key]}>
+                  {env.name}
+                  {!configured[env.key] ? " — not configured" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -262,8 +259,8 @@ export function QueryConsole({
             </SelectContent>
           </Select>
         </div>
-        {environment === "PRODUCTION" && prodWritesDisabled ? (
-          <Badge variant="warning" className="mb-1.5">Production is read-only</Badge>
+        {selectedEnv?.readOnly ? (
+          <Badge variant="warning" className="mb-1.5">{selectedEnv.name} is read-only</Badge>
         ) : null}
       </div>
 
@@ -305,7 +302,7 @@ export function QueryConsole({
             ) : null}
 
             {result ? (
-              <ResultsTable result={result} environment={environment} database={database || "—"} />
+              <ResultsTable result={result} environment={selectedEnv ?? { name: environment, color: "slate" }} database={database || "—"} />
             ) : !error ? (
               <div className="rounded-lg border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
                 Run a query to see results here.
@@ -340,6 +337,7 @@ export function QueryConsole({
               <QueryHistoryPanel
                 ref={historyRef}
                 initial={initialHistory}
+                environments={environments}
                 onLoad={(q) => setQuery(q)}
               />
             </div>
@@ -348,8 +346,8 @@ export function QueryConsole({
       </TabsContent>
 
       <TabsContent value="admin" className="mt-0">
-        {configured[environment] ? (
-          <AdminDashboard environment={environment} database={database} />
+        {selectedEnv && configured[environment] ? (
+          <AdminDashboard environment={selectedEnv} database={database} />
         ) : (
           <div className="rounded-lg border bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
             Select a configured environment to view admin stats.
@@ -360,7 +358,7 @@ export function QueryConsole({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        environment={{ key: environment, name: environment, color: "slate" }}
+        environment={selectedEnv ?? { key: environment, name: environment, color: "slate" }}
         database={database || "—"}
         dangerousKeywords={dangerousKeywords}
         pending={running}
