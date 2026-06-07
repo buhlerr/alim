@@ -7,17 +7,11 @@
  * NEVER returned to the client; the UI only receives masked metadata.
  */
 import "server-only";
-import {
-  ENVIRONMENTS,
-  ENVIRONMENT_LABELS,
-  isEnvironment,
-  type Environment,
-} from "./environments";
+import { type Environment } from "./environments";
 import { settingsService } from "@/services/settings";
 import { environmentsService } from "@/services/environments";
 
-// Re-export client-safe constants so existing server-side imports keep working.
-export { ENVIRONMENTS, ENVIRONMENT_LABELS, isEnvironment };
+// Re-export client-safe type so existing server-side imports keep working.
 export type { Environment };
 
 /** Settings key holding an environment's admin connection string. */
@@ -117,14 +111,4 @@ export async function getTargetInfo(environment: Environment): Promise<TargetInf
 export async function getAllTargetInfo(): Promise<TargetInfo[]> {
   const envs = await environmentsService.list();
   return Promise.all(envs.map((e) => getTargetInfo(e.key)));
-}
-
-/**
- * Whether write operations are hard-disabled on Production via the legacy
- * POSTGRES_PROD_READONLY env var. (Superseded by per-environment flags; removed
- * in a later task.)
- */
-export function isProdWritesDisabled(): boolean {
-  const raw = process.env.POSTGRES_PROD_READONLY?.trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }

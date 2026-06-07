@@ -11,24 +11,6 @@ import type { Environment as EnvironmentRow } from "@prisma/client";
  */
 export type Environment = string;
 
-export const ENVIRONMENTS: Environment[] = [
-  "PRODUCTION",
-  "STAGING",
-  "DEVELOPMENT",
-];
-
-export const ENVIRONMENT_LABELS: Record<Environment, string> = {
-  PRODUCTION: "Production",
-  STAGING: "Staging",
-  DEVELOPMENT: "Development",
-};
-
-export function isEnvironment(value: unknown): value is Environment {
-  return (
-    typeof value === "string" && ENVIRONMENTS.includes(value as Environment)
-  );
-}
-
 /** Client-safe, non-secret view of an environment passed from server to client. */
 export interface EnvironmentSummary {
   key: string;

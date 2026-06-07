@@ -27,8 +27,9 @@ Aspyre Labs' internal platform for centralized infrastructure administration. It
   database (`provisioned_databases`) and listed in a searchable table.
 - **Search** — by application name, database name, or username.
 - **View details** — environment, database, username, host, creation date.
-- **Settings** — read-only status of each server target with a "Test
-  connection" button. (Targets are configured via environment variables.)
+- **Settings** — define your own environments (name, color, abbreviation, plus
+  read-only and write-confirm flags), configure each one's encrypted connection
+  string, and check its status with a "Test connection" button.
 - **SQL Query Console** (`/query`) — a lightweight embedded pgAdmin:
   - CodeMirror editor with PostgreSQL syntax highlighting; Execute / Explain /
     Format (via `sql-formatter`) / Clear.
@@ -37,7 +38,8 @@ Aspyre Labs' internal platform for centralized infrastructure administration. It
   - **Safety:** reads (SELECT/EXPLAIN/SHOW) run immediately; writes (INSERT/
     UPDATE/DELETE/DROP/TRUNCATE/ALTER/GRANT/REVOKE/…) require a confirmation
     modal where you type `CONFIRM` and see the target environment + database.
-    Production writes can be hard-disabled via `POSTGRES_PROD_READONLY`.
+    Each environment's read-only and write-confirm behavior is configured on the
+    Settings page (an environment marked read-only blocks all writes against it).
   - **Results:** sortable table with client-side search, pagination, copy
     (TSV), and CSV / JSON export; shows rows, execution time, database, env.
   - **History** (`query_history`) and **Saved queries** (`saved_queries`) plus
@@ -70,7 +72,7 @@ PostgreSQL · `pg` · Server Actions · Docker (Coolify-compatible).
 ```
 src/
 ├── lib/
-│   ├── environments.ts   # client-safe Environment constants
+│   ├── environments.ts   # client-safe Environment type + summary helper
 │   ├── targets.ts        # server-only: resolves POSTGRES_*_URL per environment
 │   ├── crypto.ts         # AES-256-GCM helper (future encrypted settings)
 │   ├── password.ts       # crypto-strong password generator
@@ -109,10 +111,9 @@ Copy `.env.example` to `.env` and fill in:
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | ✅ | The app's **own** metadata database (registry + settings). Separate from the servers you provision into. |
-| `POSTGRES_PROD_URL` | — | Admin (superuser) connection string for the **Production** server. |
-| `POSTGRES_STAGING_URL` | — | Admin connection string for the **Staging** server. |
-| `POSTGRES_DEV_URL` | — | Admin connection string for the **Development** server. |
-| `POSTGRES_PROD_READONLY` | — | If truthy (`1`/`true`/`yes`/`on`), the SQL Console blocks all writes against Production. |
+| `POSTGRES_PROD_URL` | — | Optional **legacy fallback** admin (superuser) connection string for the original Production environment. Prefer configuring connection strings per environment on the Settings page. |
+| `POSTGRES_STAGING_URL` | — | Optional legacy fallback admin connection string for the original Staging environment. |
+| `POSTGRES_DEV_URL` | — | Optional legacy fallback admin connection string for the original Development environment. |
 | `ENCRYPTION_KEY` | — | 32-byte key (base64 or hex) for the future encrypted-settings store. |
 | `PROVISIONED_BY` | — | Audit label recorded against provisioning actions. |
 
@@ -190,13 +191,14 @@ metadata database.
    the `Dockerfile` and build it.
 2. Provision a **PostgreSQL** resource in Coolify for the app's metadata, or
    bring your own. Set `DATABASE_URL` to its connection string.
-3. Add environment variables: `DATABASE_URL`, the `POSTGRES_*_URL` targets you
-   want, and optionally `ENCRYPTION_KEY` / `PROVISIONED_BY`.
+3. Add environment variables: `DATABASE_URL`, `ENCRYPTION_KEY` (to enable the
+   encrypted Settings store), and optionally `PROVISIONED_BY` plus any legacy
+   `POSTGRES_*_URL` fallback targets.
 4. Set the health check path to `/api/health`.
 5. Deploy. Migrations run automatically on container start via the entrypoint.
 
-Because connection strings come from environment variables, you change a target
-by updating its variable in Coolify and redeploying — no code change.
+Define your environments and their connection strings on the Settings page; you
+can change a target by editing it there — no redeploy or code change.
 
 ---
 
