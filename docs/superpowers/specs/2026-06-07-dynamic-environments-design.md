@@ -42,6 +42,7 @@ New Prisma model (`environments` table):
 | `name` | `String` | display label, editable |
 | `description` | `String?` | optional |
 | `color` | `String` | palette swatch key (`red`, `amber`, `green`, `blue`, `violet`, `slate`, `teal`, `orange`, `cyan`, `pink`) |
+| `abbreviation` | `String?` | suffix used when deriving db/user names (e.g. `""` for prod, `staging`, `dev`); defaults to a slug of the name on create |
 | `sortOrder` | `Int @default(0)` | manual ordering |
 | `readOnly` | `Boolean @default(false)` | hard-blocks SQL writes/DDL for this env |
 | `requireWriteConfirm` | `Boolean @default(true)` | typed-CONFIRM modal for writes |
