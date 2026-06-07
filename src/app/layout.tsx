@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { BRAND } from "@/lib/brand";
 import { MainNav, MobileNav } from "@/components/main-nav";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "DB Provisioner — Aspyre Labs",
-  description:
-    "Internal tool for provisioning PostgreSQL databases, users, and permissions.",
+  title: `${BRAND.appName} — Aspyre Labs`,
+  description: BRAND.tagline,
 };
 
 export default function RootLayout({

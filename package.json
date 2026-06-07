@@ -1,8 +1,8 @@
 {
-  "name": "db-provisioner",
-  "version": "1.0.0",
+  "name": "aspyre-devops",
+  "version": "2.0.0",
   "private": true,
-  "description": "Internal Aspyre Labs tool for provisioning PostgreSQL databases, users, and permissions across multiple servers.",
+  "description": "Aspyre Labs internal platform for centralized infrastructure administration: database provisioning, SQL console, and Coolify application management.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -45,6 +45,8 @@
     "@types/react": "^19.0.5",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.19",
     "postcss": "^8.4.49",
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.17",
