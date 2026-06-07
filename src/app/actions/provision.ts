@@ -125,8 +125,8 @@ export async function createDatabaseAction(
 }
 
 /**
- * Create the full environment set for an application: production, staging, and
- * development databases + users on their respective servers. Reports per-
+ * Create the full environment set for an application: a database + user in
+ * every configured environment, on their respective servers. Reports per-
  * environment success so a partial failure is visible.
  */
 export async function createEnvSetAction(

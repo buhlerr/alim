@@ -48,7 +48,7 @@ export default async function QueryPage() {
     <div>
       <PageHeader
         title="SQL Query Console"
-        description="Run SQL against Production, Staging, and Development servers. Reads run immediately; writes require confirmation."
+        description="Run SQL against any configured environment. Reads run immediately; writes require confirmation."
       />
       <QueryConsole
         configured={configured}

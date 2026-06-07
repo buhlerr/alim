@@ -42,7 +42,7 @@ export const createDatabaseSchema = z.object({
 
 export type CreateDatabaseInput = z.infer<typeof createDatabaseSchema>;
 
-/** Input for creating a full environment set (prod + staging + dev). */
+/** Input for creating a full environment set (one per configured environment). */
 export const createEnvSetSchema = z.object({
   applicationName: z
     .string()
