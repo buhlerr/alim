@@ -1,16 +1,16 @@
 /**
  * Naming rules for derived database and user names.
  *
- * A "full environment set" for application `appname` produces:
+ * A "full environment set" for application `appname` produces one database +
+ * user per environment, suffixed by that environment's abbreviation. An empty
+ * (or null) abbreviation produces no suffix, e.g.:
  *
- *   Production   -> db: appname            user: appname_user
- *   Staging      -> db: appname_staging    user: appname_staging_user
- *   Development  -> db: appname_dev         user: appname_dev_user
+ *   abbreviation ""        -> db: appname            user: appname_user
+ *   abbreviation "staging" -> db: appname_staging    user: appname_staging_user
  *
  * The single-create form pre-fills these but allows the user to override the
  * database name and username before submitting.
  */
-import type { Environment } from "./environments";
 
 /**
  * Normalize an arbitrary application name into a safe PostgreSQL identifier
@@ -28,26 +28,16 @@ export function sanitizeIdentifier(input: string): string {
     .slice(0, 50); // leave headroom under Postgres' 63-char limit for suffixes
 }
 
-const ENV_SUFFIX: Record<Environment, string> = {
-  PRODUCTION: "",
-  STAGING: "_staging",
-  DEVELOPMENT: "_dev",
-};
-
-/** Derive the database name for an app + environment. */
-export function deriveDatabaseName(
-  appName: string,
-  environment: Environment,
-): string {
+/** Derive the database name for an app + environment abbreviation. */
+export function deriveDatabaseName(appName: string, abbreviation: string | null): string {
   const stem = sanitizeIdentifier(appName);
-  return `${stem}${ENV_SUFFIX[environment]}`;
+  const suffix = abbreviation ? `_${abbreviation}` : "";
+  return `${stem}${suffix}`;
 }
 
-/** Derive the database username for an app + environment. */
-export function deriveUsername(
-  appName: string,
-  environment: Environment,
-): string {
+/** Derive the database username for an app + environment abbreviation. */
+export function deriveUsername(appName: string, abbreviation: string | null): string {
   const stem = sanitizeIdentifier(appName);
-  return `${stem}${ENV_SUFFIX[environment]}_user`;
+  const suffix = abbreviation ? `_${abbreviation}` : "";
+  return `${stem}${suffix}_user`;
 }

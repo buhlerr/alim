@@ -9,7 +9,6 @@ import {
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
 import { generatePassword } from "@/lib/password";
 import {
-  ENVIRONMENTS,
   POSTGRES_SETTING_KEYS,
   type Environment,
 } from "@/lib/targets";
@@ -80,6 +79,8 @@ export async function createDatabaseAction(
   }
 
   const data = parsed.data;
+  if (!(await environmentsService.get(data.environment)))
+    return { ok: false, error: "Unknown environment." };
   try {
     const result = await postgresProvisioner.provision({
       environment: data.environment as Environment,
@@ -146,9 +147,11 @@ export async function createEnvSetAction(
   const { applicationName, notes } = parsed.data;
   const results: NonNullable<EnvSetActionResult["results"]> = [];
 
-  for (const environment of ENVIRONMENTS) {
-    const databaseName = deriveDatabaseName(applicationName, environment);
-    const username = deriveUsername(applicationName, environment);
+  const environments = await environmentsService.list();
+  for (const env of environments) {
+    const environment = env.key;
+    const databaseName = deriveDatabaseName(applicationName, env.abbreviation);
+    const username = deriveUsername(applicationName, env.abbreviation);
     const password = generatePassword();
     try {
       const result = await postgresProvisioner.provision({
