@@ -44,9 +44,21 @@ export async function saveCoolifyConfigAction(
       fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
     };
   }
+  const token = parsed.data.apiToken?.trim() ?? "";
+  // The token is required for first-time setup, but optional on update: a blank
+  // field keeps the token already stored (we never echo it back to the client).
+  if (!token && !(await settingsService.has(COOLIFY_SETTING_KEYS.apiToken))) {
+    return {
+      ok: false,
+      error: "An API token is required.",
+      fieldErrors: { apiToken: ["API token is required"] },
+    };
+  }
   try {
     await settingsService.set(COOLIFY_SETTING_KEYS.baseUrl, parsed.data.baseUrl);
-    await settingsService.set(COOLIFY_SETTING_KEYS.apiToken, parsed.data.apiToken);
+    if (token) {
+      await settingsService.set(COOLIFY_SETTING_KEYS.apiToken, token);
+    }
     revalidatePath("/settings");
     revalidatePath("/coolify");
     return { ok: true };
