@@ -4,6 +4,17 @@ vi.mock("@/services/settings", () => ({
   settingsService: { get: vi.fn() },
 }));
 
+vi.mock("@/services/environments", () => ({
+  environmentsService: {
+    list: vi.fn(async () => [
+      { key: "PRODUCTION", name: "Production", color: "red", abbreviation: "" },
+      { key: "STAGING", name: "Staging", color: "amber", abbreviation: "staging" },
+      { key: "DEVELOPMENT", name: "Development", color: "slate", abbreviation: "dev" },
+    ]),
+    get: vi.fn(async (k: string) => ({ key: k, name: k, color: "slate", abbreviation: null })),
+  },
+}));
+
 import { settingsService } from "@/services/settings";
 import { getAdminUrl, getTargetInfo, POSTGRES_SETTING_KEYS } from "./targets";
 
@@ -19,7 +30,7 @@ beforeEach(() => {
 describe("getAdminUrl", () => {
   it("prefers the settings value over the env var", async () => {
     get.mockImplementation(async (k: string) =>
-      k === POSTGRES_SETTING_KEYS.PRODUCTION
+      k === POSTGRES_SETTING_KEYS("PRODUCTION")
         ? "postgresql://s@db:5432/postgres"
         : null,
     );

@@ -34,6 +34,7 @@ import type { Environment } from "@/lib/environments";
 export interface PostgresTargetView {
   environment: Environment;
   label: string;
+  color: string;
   configured: boolean;
   source: "settings" | "env" | null;
   host: string | null;
@@ -101,7 +102,7 @@ export function PostgresTargetForm({ target }: { target: PostgresTargetView }) {
         <div className="flex items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2 text-base">
             <EnvironmentBadge
-              environment={{ name: target.environment, color: "slate" }}
+              environment={{ name: target.label, color: target.color }}
             />
           </CardTitle>
           {target.configured ? (

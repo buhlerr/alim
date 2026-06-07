@@ -17,6 +17,7 @@ import { postgresProvisioner } from "@/services/provisioning/postgres";
 import { ProvisioningError } from "@/services/provisioning/types";
 import { registryService } from "@/services/registry";
 import { settingsService } from "@/services/settings";
+import { environmentsService } from "@/services/environments";
 
 /** Client-safe shape returned after a successful single provision. */
 export interface ProvisionActionResult {
@@ -198,7 +199,7 @@ export async function createEnvSetAction(
 export async function testConnectionAction(
   environment: Environment,
 ): Promise<TestConnectionResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, message: "Unknown environment." };
   }
   return postgresProvisioner.testConnection(environment);
@@ -217,7 +218,7 @@ export async function savePostgresTargetAction(
   environment: Environment,
   connectionString: unknown,
 ): Promise<SaveTargetResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, error: "Unknown environment." };
   }
   const parsed = postgresConnectionSchema.safeParse(connectionString);
@@ -228,7 +229,7 @@ export async function savePostgresTargetAction(
     };
   }
   try {
-    await settingsService.set(POSTGRES_SETTING_KEYS[environment], parsed.data.trim());
+    await settingsService.set(POSTGRES_SETTING_KEYS(environment), parsed.data.trim());
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");
@@ -249,11 +250,11 @@ export async function savePostgresTargetAction(
 export async function clearPostgresTargetAction(
   environment: Environment,
 ): Promise<SaveTargetResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, error: "Unknown environment." };
   }
   try {
-    await settingsService.delete(POSTGRES_SETTING_KEYS[environment]);
+    await settingsService.delete(POSTGRES_SETTING_KEYS(environment));
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");
