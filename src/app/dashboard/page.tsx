@@ -35,16 +35,17 @@ import { BRAND } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, recent, targets, environments] = await Promise.all([
+  const [stats, recent, targets, envRows] = await Promise.all([
     registryService.stats(),
     registryService.recent(8),
     getAllTargetInfo(),
     environmentsService.list(),
   ]);
 
+  const environments = envRows.map(toSummary);
   const configuredCount = targets.filter((t) => t.configured).length;
 
-  const envByKey = new Map(environments.map(toSummary).map((e) => [e.key, e]));
+  const envByKey = new Map(environments.map((e) => [e.key, e]));
   const envBadge = (key: string) => {
     const e = envByKey.get(key);
     return { key, name: e?.name ?? key, color: e?.color ?? "slate" };
@@ -81,19 +82,17 @@ export default async function DashboardPage() {
           value={stats.total}
           icon={<Database className="h-4 w-4 text-muted-foreground" />}
         />
-        <StatCard
-          title="Production"
-          value={stats.byEnvironment.PRODUCTION}
-          icon={<Layers className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Staging"
-          value={stats.byEnvironment.STAGING}
-          icon={<Layers className="h-4 w-4 text-muted-foreground" />}
-        />
+        {environments.map((env) => (
+          <StatCard
+            key={env.key}
+            title={env.name}
+            value={stats.byEnvironment[env.key] ?? 0}
+            icon={<Layers className="h-4 w-4 text-muted-foreground" />}
+          />
+        ))}
         <StatCard
           title="Configured servers"
-          value={`${configuredCount}/3`}
+          value={`${configuredCount}/${targets.length}`}
           icon={<Server className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
