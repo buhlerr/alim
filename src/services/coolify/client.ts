@@ -84,5 +84,15 @@ export async function coolifyFetch<T>(opts: CoolifyRequestOptions): Promise<T> {
     return undefined as T;
   }
   const text = await res.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  if (!text) {
+    return undefined as T;
+  }
+  // Most endpoints return JSON, but some (e.g. /version) return a bare string
+  // with a non-JSON content type. Parse as JSON when possible, otherwise fall
+  // back to the raw text so a plain-text body doesn't crash the request.
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
 }
