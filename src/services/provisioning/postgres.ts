@@ -127,7 +127,7 @@ export class PostgresProvisioner implements Provisioner {
     const url = await getAdminUrl(environment);
     if (!url) {
       throw new ProvisioningError(
-        `The ${environment} server is not configured. Set its connection string in the environment.`,
+        `The ${environment} server is not configured. Add its connection string on the Settings page (or set its POSTGRES_*_URL env var).`,
         "NOT_CONFIGURED",
       );
     }
