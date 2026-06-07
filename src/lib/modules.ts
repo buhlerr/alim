@@ -73,9 +73,9 @@ export const MODULES: AppModule[] = [
     description: "Create, configure, and deploy applications via the Coolify API.",
     icon: Cloud,
     href: "/coolify",
-    status: "coming-soon", // flipped to "available" in Part B, Task 14
+    status: "available",
     group: "infrastructure",
-    nav: [], // populated in Task 14
+    nav: [{ href: "/coolify", label: "Coolify", icon: Cloud }],
   },
   {
     id: "npm",

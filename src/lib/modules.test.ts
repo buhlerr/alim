@@ -18,8 +18,9 @@ describe("MODULES", () => {
     expect(getModule("query")?.status).toBe("available");
   });
 
-  it("lists Coolify as coming-soon until Part B flips it", () => {
-    expect(getModule("coolify")?.status).toBe("coming-soon");
+  it("lists Coolify as an available module", () => {
+    expect(getModule("coolify")?.status).toBe("available");
+    expect(getModule("coolify")?.nav.map((n) => n.href)).toContain("/coolify");
   });
 
   it("includes the planned platform modules", () => {
@@ -36,6 +37,6 @@ describe("MODULES", () => {
     const hrefs = navItems().map((n) => n.href);
     expect(hrefs).toContain("/dashboard");
     expect(hrefs).toContain("/query");
-    expect(hrefs).not.toContain("/coolify"); // coming-soon in Part A
+    expect(hrefs).toContain("/coolify");
   });
 });
