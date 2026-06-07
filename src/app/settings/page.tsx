@@ -13,13 +13,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getAllTargetInfo, type Environment } from "@/lib/targets";
 import { CoolifySettingsForm } from "@/components/settings/coolify-settings-form";
-import { isCoolifyConfigured } from "@/lib/coolify-config";
+import { COOLIFY_SETTING_KEYS, isCoolifyConfigured } from "@/lib/coolify-config";
+import { settingsService } from "@/services/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const targets = getAllTargetInfo();
   const coolifyConfigured = await isCoolifyConfigured();
+  // Base URL is not a secret, so we pre-fill it for display. The token is never
+  // sent to the client.
+  const coolifyBaseUrl =
+    (await settingsService.get(COOLIFY_SETTING_KEYS.baseUrl)) ??
+    process.env.COOLIFY_BASE_URL ??
+    "";
 
   return (
     <div>
@@ -112,7 +119,10 @@ export default async function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CoolifySettingsForm configured={coolifyConfigured} />
+            <CoolifySettingsForm
+              configured={coolifyConfigured}
+              initialBaseUrl={coolifyBaseUrl}
+            />
           </CardContent>
         </Card>
       </div>

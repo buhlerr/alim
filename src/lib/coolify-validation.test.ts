@@ -19,9 +19,11 @@ describe("coolifyConfigSchema", () => {
     expect(r.success).toBe(false);
   });
 
-  it("rejects an empty token", () => {
-    const r = coolifyConfigSchema.safeParse({ baseUrl: "https://x.com", apiToken: "" });
-    expect(r.success).toBe(false);
+  it("allows a blank/omitted token (required-ness is enforced in the action on first setup)", () => {
+    expect(
+      coolifyConfigSchema.safeParse({ baseUrl: "https://x.com", apiToken: "" }).success,
+    ).toBe(true);
+    expect(coolifyConfigSchema.safeParse({ baseUrl: "https://x.com" }).success).toBe(true);
   });
 });
 

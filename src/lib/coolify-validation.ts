@@ -2,7 +2,10 @@ import { z } from "zod";
 
 export const coolifyConfigSchema = z.object({
   baseUrl: z.string().url("Enter a valid URL, e.g. https://coolify.example.com"),
-  apiToken: z.string().min(1, "API token is required"),
+  // Optional at the schema level: when left blank on an update, the existing
+  // stored token is kept. The action enforces "required" on first-time setup
+  // (when no token is stored yet).
+  apiToken: z.string().optional(),
 });
 export type CoolifyConfigInput = z.infer<typeof coolifyConfigSchema>;
 

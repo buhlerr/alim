@@ -13,8 +13,14 @@ import {
 } from "@/app/actions/coolify";
 import type { CoolifyConnectionResult } from "@/services/coolify/types";
 
-export function CoolifySettingsForm({ configured }: { configured: boolean }) {
-  const [baseUrl, setBaseUrl] = React.useState("");
+export function CoolifySettingsForm({
+  configured,
+  initialBaseUrl = "",
+}: {
+  configured: boolean;
+  initialBaseUrl?: string;
+}) {
+  const [baseUrl, setBaseUrl] = React.useState(initialBaseUrl);
   const [apiToken, setApiToken] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
