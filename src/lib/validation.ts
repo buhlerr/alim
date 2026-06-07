@@ -54,6 +54,22 @@ export const createEnvSetSchema = z.object({
 
 export type CreateEnvSetInput = z.infer<typeof createEnvSetSchema>;
 
+/**
+ * A PostgreSQL admin connection string, used by the Settings page to store a
+ * target's connection in the encrypted settings store.
+ */
+export const postgresConnectionSchema = z
+  .string()
+  .min(1, "Connection string is required")
+  .refine((v) => {
+    try {
+      const u = new URL(v.trim());
+      return u.protocol === "postgres:" || u.protocol === "postgresql:";
+    } catch {
+      return false;
+    }
+  }, "Must be a valid postgres:// or postgresql:// connection string");
+
 /** Assert an identifier is safe to interpolate into SQL. Throws otherwise. */
 export function assertSafeIdentifier(value: string): string {
   if (!IDENTIFIER_REGEX.test(value) || value.length > MAX_IDENTIFIER_LENGTH) {

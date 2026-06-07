@@ -123,11 +123,11 @@ async function withClient<T>(
 export class PostgresProvisioner implements Provisioner {
   readonly engine = "postgres" as const;
 
-  private requireAdminUrl(environment: Environment): string {
-    const url = getAdminUrl(environment);
+  private async requireAdminUrl(environment: Environment): Promise<string> {
+    const url = await getAdminUrl(environment);
     if (!url) {
       throw new ProvisioningError(
-        `The ${environment} server is not configured. Set its connection string in the environment.`,
+        `The ${environment} server is not configured. Add its connection string on the Settings page (or set its POSTGRES_*_URL env var).`,
         "NOT_CONFIGURED",
       );
     }
@@ -137,7 +137,7 @@ export class PostgresProvisioner implements Provisioner {
   async testConnection(
     environment: Environment,
   ): Promise<ConnectionTestResult> {
-    const url = getAdminUrl(environment);
+    const url = await getAdminUrl(environment);
     if (!url) {
       return { ok: false, message: "Not configured." };
     }
@@ -162,7 +162,7 @@ export class PostgresProvisioner implements Provisioner {
     assertSafeIdentifier(databaseName);
     assertSafeIdentifier(username);
 
-    const adminUrl = this.requireAdminUrl(environment);
+    const adminUrl = await this.requireAdminUrl(environment);
     const conn = parseConnection(adminUrl);
     if (!conn) {
       throw new ProvisioningError(

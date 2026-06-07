@@ -13,7 +13,7 @@ export default async function CreatePage({
   searchParams: Promise<{ mode?: string }>;
 }) {
   const { mode } = await searchParams;
-  const targets = getAllTargetInfo();
+  const targets = await getAllTargetInfo();
   const configured = targets.reduce(
     (acc, t) => {
       acc[t.environment as Environment] = t.configured;
@@ -34,11 +34,12 @@ export default async function CreatePage({
       {noneConfigured ? (
         <Card className="mb-6 border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
           <CardContent className="py-4 text-sm text-amber-800 dark:text-amber-300">
-            No PostgreSQL servers are configured yet. Set{" "}
-            <code className="font-mono">POSTGRES_PROD_URL</code>,{" "}
-            <code className="font-mono">POSTGRES_STAGING_URL</code>, or{" "}
-            <code className="font-mono">POSTGRES_DEV_URL</code> in the
-            environment, then check the Settings page.
+            No PostgreSQL servers are configured yet. Add a connection string for
+            an environment on the{" "}
+            <a href="/settings" className="font-medium underline">
+              Settings page
+            </a>{" "}
+            to get started.
           </CardContent>
         </Card>
       ) : null}
