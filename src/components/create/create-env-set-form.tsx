@@ -14,9 +14,9 @@ import {
 } from "@/components/create/provision-result";
 import { createEnvSetAction } from "@/app/actions/provision";
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
-import { ENVIRONMENTS } from "@/lib/environments";
+import type { EnvironmentSummary } from "@/lib/environments";
 
-export function CreateEnvSetForm() {
+export function CreateEnvSetForm({ environments }: { environments: EnvironmentSummary[] }) {
   const [appName, setAppName] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [pending, setPending] = React.useState(false);
@@ -43,7 +43,17 @@ export function CreateEnvSetForm() {
         notes,
       });
       if (res.results) {
-        setResults(res.results as ProvisionResultItem[]);
+        const envByKey = new Map(environments.map((e) => [e.key, e]));
+        setResults(
+          res.results.map((r) => ({
+            ...r,
+            environment: {
+              key: r.environment as string,
+              name: envByKey.get(r.environment)?.name ?? (r.environment as string),
+              color: envByKey.get(r.environment)?.color ?? "slate",
+            },
+          })) as ProvisionResultItem[],
+        );
         const okCount = res.results.filter((r) => r.ok).length;
         if (okCount === res.results.length) {
           toast.success("Full environment set provisioned.");
@@ -89,8 +99,7 @@ export function CreateEnvSetForm() {
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            One click creates production, staging, and development databases
-            and users on their respective servers.
+            One click creates a database and user in every environment.
           </p>
         )}
       </div>
@@ -101,14 +110,12 @@ export function CreateEnvSetForm() {
             Will create
           </p>
           <div className="space-y-1 font-mono text-xs">
-            {ENVIRONMENTS.map((env) => (
-              <div key={env} className="flex flex-wrap gap-x-2">
-                <span className="text-muted-foreground">
-                  {env.toLowerCase()}:
-                </span>
-                <span>{deriveDatabaseName(appName, env)}</span>
+            {environments.map((env) => (
+              <div key={env.key} className="flex flex-wrap gap-x-2">
+                <span className="text-muted-foreground">{env.name}:</span>
+                <span>{deriveDatabaseName(appName, env.abbreviation)}</span>
                 <span className="text-muted-foreground">/</span>
-                <span>{deriveUsername(appName, env)}</span>
+                <span>{deriveUsername(appName, env.abbreviation)}</span>
               </div>
             ))}
           </div>
@@ -120,7 +127,7 @@ export function CreateEnvSetForm() {
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Applied to all three records."
+          placeholder="Applied to every environment's record."
           rows={2}
         />
       </div>

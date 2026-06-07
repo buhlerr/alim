@@ -25,7 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getAllTargetInfo, type Environment } from "@/lib/targets";
+import { getAllTargetInfo } from "@/lib/targets";
+import { toSummary } from "@/lib/environments";
+import { environmentsService } from "@/services/environments";
 import { registryService } from "@/services/registry";
 import { MODULES, type AppModule } from "@/lib/modules";
 import { BRAND } from "@/lib/brand";
@@ -33,13 +35,21 @@ import { BRAND } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, recent, targets] = await Promise.all([
+  const [stats, recent, targets, envRows] = await Promise.all([
     registryService.stats(),
     registryService.recent(8),
     getAllTargetInfo(),
+    environmentsService.list(),
   ]);
 
+  const environments = envRows.map(toSummary);
   const configuredCount = targets.filter((t) => t.configured).length;
+
+  const envByKey = new Map(environments.map((e) => [e.key, e]));
+  const envBadge = (key: string) => {
+    const e = envByKey.get(key);
+    return { key, name: e?.name ?? key, color: e?.color ?? "slate" };
+  };
 
   return (
     <div>
@@ -72,19 +82,17 @@ export default async function DashboardPage() {
           value={stats.total}
           icon={<Database className="h-4 w-4 text-muted-foreground" />}
         />
-        <StatCard
-          title="Production"
-          value={stats.byEnvironment.PRODUCTION}
-          icon={<Layers className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Staging"
-          value={stats.byEnvironment.STAGING}
-          icon={<Layers className="h-4 w-4 text-muted-foreground" />}
-        />
+        {environments.map((env) => (
+          <StatCard
+            key={env.key}
+            title={env.name}
+            value={stats.byEnvironment[env.key] ?? 0}
+            icon={<Layers className="h-4 w-4 text-muted-foreground" />}
+          />
+        ))}
         <StatCard
           title="Configured servers"
-          value={`${configuredCount}/3`}
+          value={`${configuredCount}/${targets.length}`}
           icon={<Server className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
@@ -130,9 +138,7 @@ export default async function DashboardPage() {
                 className="flex items-center justify-between rounded-lg border p-3"
               >
                 <div className="flex items-center gap-3">
-                  <EnvironmentBadge
-                    environment={t.environment as Environment}
-                  />
+                  <EnvironmentBadge environment={envBadge(t.environment)} />
                   <span className="font-mono text-sm">
                     {t.configured ? t.host : "—"}
                   </span>
@@ -184,9 +190,7 @@ export default async function DashboardPage() {
                       {row.applicationName}
                     </TableCell>
                     <TableCell>
-                      <EnvironmentBadge
-                        environment={row.environment as Environment}
-                      />
+                      <EnvironmentBadge environment={envBadge(row.environment)} />
                     </TableCell>
                     <TableCell className="font-mono text-xs">
                       {row.databaseName}

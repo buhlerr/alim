@@ -22,12 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Environment } from "@/lib/environments";
 
 export interface RegistryRow {
   id: string;
   applicationName: string;
-  environment: Environment;
+  environment: { key: string; name: string; color: string };
   databaseName: string;
   username: string;
   host: string;

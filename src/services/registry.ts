@@ -83,24 +83,19 @@ export const registryService = {
     return prisma.provisionedDatabase.findUnique({ where: { id } });
   },
 
-  /** Aggregate counts for the dashboard cards. */
+  /** Aggregate counts for the dashboard cards, keyed by environment key. */
   async stats(): Promise<{
     total: number;
-    byEnvironment: Record<Environment, number>;
+    byEnvironment: Record<string, number>;
   }> {
     const grouped = await prisma.provisionedDatabase.groupBy({
       by: ["environment"],
       _count: { _all: true },
     });
-    const byEnvironment: Record<Environment, number> = {
-      PRODUCTION: 0,
-      STAGING: 0,
-      DEVELOPMENT: 0,
-    };
+    const byEnvironment: Record<string, number> = {};
     let total = 0;
     for (const row of grouped) {
-      const env = row.environment as Environment;
-      byEnvironment[env] = row._count._all;
+      byEnvironment[row.environment] = row._count._all;
       total += row._count._all;
     }
     return { total, byEnvironment };

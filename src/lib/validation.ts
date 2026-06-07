@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ENVIRONMENTS } from "./environments";
+import { PALETTE_KEYS } from "./environment-palette";
 
 /**
  * PostgreSQL identifier rule used throughout the app.
@@ -21,9 +21,8 @@ export const identifierSchema = z
     "Must start with a letter and contain only lowercase letters, numbers, and underscores",
   );
 
-export const environmentSchema = z.enum(
-  ENVIRONMENTS as [string, ...string[]],
-);
+// An environment key. Existence against the live list is verified in actions.
+export const environmentSchema = z.string().min(1, "Environment is required");
 
 /** Input for creating a single database. */
 export const createDatabaseSchema = z.object({
@@ -43,7 +42,7 @@ export const createDatabaseSchema = z.object({
 
 export type CreateDatabaseInput = z.infer<typeof createDatabaseSchema>;
 
-/** Input for creating a full environment set (prod + staging + dev). */
+/** Input for creating a full environment set (one per configured environment). */
 export const createEnvSetSchema = z.object({
   applicationName: z
     .string()
@@ -77,3 +76,19 @@ export function assertSafeIdentifier(value: string): string {
   }
   return value;
 }
+
+/** Input for creating/updating an environment from the Settings UI. */
+export const environmentInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(60, "Name is too long"),
+  description: z.string().max(500).optional().or(z.literal("")),
+  color: z.enum(PALETTE_KEYS as [string, ...string[]]),
+  abbreviation: z
+    .string()
+    .max(30)
+    .regex(/^[a-z0-9_]*$/, "Lowercase letters, numbers, and underscores only")
+    .optional()
+    .or(z.literal("")),
+  readOnly: z.boolean().optional(),
+  requireWriteConfirm: z.boolean().optional(),
+});
+export type EnvironmentInput = z.infer<typeof environmentInputSchema>;

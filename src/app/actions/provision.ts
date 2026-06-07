@@ -9,7 +9,6 @@ import {
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
 import { generatePassword } from "@/lib/password";
 import {
-  ENVIRONMENTS,
   POSTGRES_SETTING_KEYS,
   type Environment,
 } from "@/lib/targets";
@@ -17,6 +16,7 @@ import { postgresProvisioner } from "@/services/provisioning/postgres";
 import { ProvisioningError } from "@/services/provisioning/types";
 import { registryService } from "@/services/registry";
 import { settingsService } from "@/services/settings";
+import { environmentsService } from "@/services/environments";
 
 /** Client-safe shape returned after a successful single provision. */
 export interface ProvisionActionResult {
@@ -79,6 +79,8 @@ export async function createDatabaseAction(
   }
 
   const data = parsed.data;
+  if (!(await environmentsService.get(data.environment)))
+    return { ok: false, error: "Unknown environment." };
   try {
     const result = await postgresProvisioner.provision({
       environment: data.environment as Environment,
@@ -123,8 +125,8 @@ export async function createDatabaseAction(
 }
 
 /**
- * Create the full environment set for an application: production, staging, and
- * development databases + users on their respective servers. Reports per-
+ * Create the full environment set for an application: a database + user in
+ * every configured environment, on their respective servers. Reports per-
  * environment success so a partial failure is visible.
  */
 export async function createEnvSetAction(
@@ -145,9 +147,11 @@ export async function createEnvSetAction(
   const { applicationName, notes } = parsed.data;
   const results: NonNullable<EnvSetActionResult["results"]> = [];
 
-  for (const environment of ENVIRONMENTS) {
-    const databaseName = deriveDatabaseName(applicationName, environment);
-    const username = deriveUsername(applicationName, environment);
+  const environments = await environmentsService.list();
+  for (const env of environments) {
+    const environment = env.key;
+    const databaseName = deriveDatabaseName(applicationName, env.abbreviation);
+    const username = deriveUsername(applicationName, env.abbreviation);
     const password = generatePassword();
     try {
       const result = await postgresProvisioner.provision({
@@ -198,7 +202,7 @@ export async function createEnvSetAction(
 export async function testConnectionAction(
   environment: Environment,
 ): Promise<TestConnectionResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, message: "Unknown environment." };
   }
   return postgresProvisioner.testConnection(environment);
@@ -217,7 +221,7 @@ export async function savePostgresTargetAction(
   environment: Environment,
   connectionString: unknown,
 ): Promise<SaveTargetResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, error: "Unknown environment." };
   }
   const parsed = postgresConnectionSchema.safeParse(connectionString);
@@ -228,7 +232,7 @@ export async function savePostgresTargetAction(
     };
   }
   try {
-    await settingsService.set(POSTGRES_SETTING_KEYS[environment], parsed.data.trim());
+    await settingsService.set(POSTGRES_SETTING_KEYS(environment), parsed.data.trim());
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");
@@ -249,11 +253,11 @@ export async function savePostgresTargetAction(
 export async function clearPostgresTargetAction(
   environment: Environment,
 ): Promise<SaveTargetResult> {
-  if (!ENVIRONMENTS.includes(environment)) {
+  if (!(await environmentsService.get(environment))) {
     return { ok: false, error: "Unknown environment." };
   }
   try {
-    await settingsService.delete(POSTGRES_SETTING_KEYS[environment]);
+    await settingsService.delete(POSTGRES_SETTING_KEYS(environment));
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");

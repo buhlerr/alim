@@ -22,7 +22,7 @@ import {
   adminPerformanceAction,
   adminStorageAction,
 } from "@/app/actions/query";
-import type { Environment } from "@/lib/environments";
+import type { EnvironmentSummary } from "@/lib/environments";
 import type { ServerOverview } from "@/services/query/types";
 import type { AdminPerformance, AdminStorage } from "@/services/query/admin";
 
@@ -30,7 +30,7 @@ export function AdminDashboard({
   environment,
   database,
 }: {
-  environment: Environment;
+  environment: EnvironmentSummary;
   database: string;
 }) {
   const [overview, setOverview] = React.useState<ServerOverview | null>(null);
@@ -43,13 +43,13 @@ export function AdminDashboard({
   const loadOverview = React.useCallback(async () => {
     setLoadingOverview(true);
     try {
-      const res = await adminOverviewAction(environment);
+      const res = await adminOverviewAction(environment.key);
       if (res.ok && res.overview) setOverview(res.overview);
       else toast.error(res.error ?? "Could not load overview.");
     } finally {
       setLoadingOverview(false);
     }
-  }, [environment]);
+  }, [environment.key]);
 
   // Reset + auto-load overview when the environment changes.
   React.useEffect(() => {
@@ -61,7 +61,7 @@ export function AdminDashboard({
   async function loadStorage() {
     setLoadingStorage(true);
     try {
-      const res = await adminStorageAction(environment, database);
+      const res = await adminStorageAction(environment.key, database);
       if (res.ok && res.storage) setStorage(res.storage);
       else toast.error(res.error ?? "Could not load storage stats.");
     } finally {
@@ -72,7 +72,7 @@ export function AdminDashboard({
   async function loadPerf() {
     setLoadingPerf(true);
     try {
-      const res = await adminPerformanceAction(environment);
+      const res = await adminPerformanceAction(environment.key);
       if (res.ok && res.performance) setPerf(res.performance);
       else toast.error(res.error ?? "Could not load performance stats.");
     } finally {

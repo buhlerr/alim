@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Environment } from "@/lib/environments";
+import type { EnvironmentSummary } from "@/lib/environments";
 import type { QueryResult } from "@/services/query/types";
 
 const PAGE_SIZE = 25;
@@ -36,7 +36,7 @@ export function ResultsTable({
   database,
 }: {
   result: QueryResult;
-  environment: Environment;
+  environment: Pick<EnvironmentSummary, "name" | "color">;
   database: string;
 }) {
   const [search, setSearch] = React.useState("");

@@ -7,7 +7,8 @@ import {
   RegistryTable,
   type RegistryRow,
 } from "@/components/registry/registry-table";
-import type { Environment } from "@/lib/environments";
+import { toSummary } from "@/lib/environments";
+import { environmentsService } from "@/services/environments";
 import { registryService } from "@/services/registry";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +20,16 @@ export default async function RegistryPage({
 }) {
   const { q } = await searchParams;
   const records = await registryService.list(q);
+  const envList = (await environmentsService.list()).map(toSummary);
+  const envByKey = new Map(envList.map((e) => [e.key, e]));
 
   const rows: RegistryRow[] = records.map((r) => ({
     id: r.id,
     applicationName: r.applicationName,
-    environment: r.environment as Environment,
+    environment: (() => {
+      const e = envByKey.get(r.environment);
+      return { key: r.environment, name: e?.name ?? r.environment, color: e?.color ?? "slate" };
+    })(),
     databaseName: r.databaseName,
     username: r.username,
     host: r.host,

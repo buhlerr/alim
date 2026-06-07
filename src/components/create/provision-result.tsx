@@ -7,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConnectionString } from "@/components/connection-string";
 import { EnvironmentBadge } from "@/components/environment-badge";
 import { Separator } from "@/components/ui/separator";
-import type { Environment } from "@/lib/environments";
 
 export interface ProvisionResultItem {
-  environment: Environment;
+  environment: { key: string; name: string; color: string };
   ok: boolean;
   error?: string;
   databaseName?: string;
@@ -52,7 +51,7 @@ export function ProvisionResultPanel({
       </div>
 
       {results.map((r) => (
-        <Card key={r.environment}>
+        <Card key={r.environment.key}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <EnvironmentBadge environment={r.environment} />

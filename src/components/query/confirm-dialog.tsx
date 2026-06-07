@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Environment } from "@/lib/environments";
 
 const CONFIRM_WORD = "CONFIRM";
 
@@ -30,7 +29,7 @@ export function ConfirmDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  environment: Environment;
+  environment: { key: string; name: string; color: string };
   database: string;
   dangerousKeywords: string[];
   pending: boolean;
@@ -111,7 +110,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
           >
             {pending ? <Loader2 className="animate-spin" /> : null}
-            Execute on {environment.toLowerCase()}
+            Execute on {environment.name}
           </Button>
         </DialogFooter>
       </DialogContent>

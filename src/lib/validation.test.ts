@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { postgresConnectionSchema } from "./validation";
+import { postgresConnectionSchema, environmentInputSchema } from "./validation";
 
 describe("postgresConnectionSchema", () => {
   it("accepts a postgresql:// URL", () => {
@@ -29,5 +29,17 @@ describe("postgresConnectionSchema", () => {
 
   it("rejects a non-URL string", () => {
     expect(postgresConnectionSchema.safeParse("not a url").success).toBe(false);
+  });
+});
+
+describe("environmentInputSchema", () => {
+  it("accepts a valid environment", () => {
+    expect(environmentInputSchema.safeParse({ name: "QA", color: "blue" }).success).toBe(true);
+  });
+  it("rejects a blank name", () => {
+    expect(environmentInputSchema.safeParse({ name: "", color: "blue" }).success).toBe(false);
+  });
+  it("rejects an unknown color", () => {
+    expect(environmentInputSchema.safeParse({ name: "QA", color: "octarine" }).success).toBe(false);
   });
 });

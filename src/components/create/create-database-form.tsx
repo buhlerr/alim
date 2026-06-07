@@ -23,20 +23,18 @@ import {
 } from "@/app/actions/provision";
 import { generatePasswordAction } from "@/app/actions/utils";
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
-import {
-  ENVIRONMENT_LABELS,
-  ENVIRONMENTS,
-  type Environment,
-} from "@/lib/environments";
+import type { Environment, EnvironmentSummary } from "@/lib/environments";
 
 interface Props {
   configured: Record<Environment, boolean>;
+  environments: EnvironmentSummary[];
 }
 
-export function CreateDatabaseForm({ configured }: Props) {
+export function CreateDatabaseForm({ configured, environments }: Props) {
   const [environment, setEnvironment] = React.useState<Environment>(
-    ENVIRONMENTS.find((e) => configured[e]) ?? "DEVELOPMENT",
+    environments.find((e) => configured[e.key])?.key ?? environments[0]?.key ?? "",
   );
+  const selectedEnv = environments.find((e) => e.key === environment);
   const [appName, setAppName] = React.useState("");
   const [dbName, setDbName] = React.useState("");
   const [username, setUsername] = React.useState("");
@@ -68,12 +66,12 @@ export function CreateDatabaseForm({ configured }: Props) {
   // Re-derive db name / username from app name + environment unless edited.
   React.useEffect(() => {
     if (!dbEdited.current) {
-      setDbName(appName ? deriveDatabaseName(appName, environment) : "");
+      setDbName(appName ? deriveDatabaseName(appName, selectedEnv?.abbreviation ?? null) : "");
     }
     if (!userEdited.current) {
-      setUsername(appName ? deriveUsername(appName, environment) : "");
+      setUsername(appName ? deriveUsername(appName, selectedEnv?.abbreviation ?? null) : "");
     }
-  }, [appName, environment]);
+  }, [appName, selectedEnv?.abbreviation]);
 
   function resetForm() {
     setAppName("");
@@ -123,7 +121,7 @@ export function CreateDatabaseForm({ configured }: Props) {
   if (result) {
     return (
       <ProvisionResultPanel
-        results={[{ ok: true, ...result }]}
+        results={[{ ...result, ok: true, environment: { key: result.environment, name: selectedEnv?.name ?? result.environment, color: selectedEnv?.color ?? "slate" } }]}
         onDone={resetForm}
         doneLabel="Create another"
       />
@@ -141,10 +139,10 @@ export function CreateDatabaseForm({ configured }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {ENVIRONMENTS.map((env) => (
-              <SelectItem key={env} value={env} disabled={!configured[env]}>
-                {ENVIRONMENT_LABELS[env]}
-                {!configured[env] ? " — not configured" : ""}
+            {environments.map((env) => (
+              <SelectItem key={env.key} value={env.key} disabled={!configured[env.key]}>
+                {env.name}
+                {!configured[env.key] ? " — not configured" : ""}
               </SelectItem>
             ))}
           </SelectContent>

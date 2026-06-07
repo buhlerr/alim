@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isEnvironment, isProdWritesDisabled, type Environment } from "@/lib/targets";
+import { type Environment } from "@/lib/targets";
+import { environmentsService } from "@/services/environments";
 import { classifyQuery } from "@/lib/sql-classify";
 import { evaluatePolicy } from "@/lib/query-policy";
 import { assertSafeIdentifier } from "@/lib/validation";
@@ -12,9 +13,11 @@ import { savedQueryService } from "@/services/query/saved";
 import { QueryError, type QueryResult, type ServerOverview } from "@/services/query/types";
 import type { AdminPerformance, AdminStorage } from "@/services/query/admin";
 
-function asEnv(value: unknown): Environment {
-  if (!isEnvironment(value)) throw new QueryError("Unknown environment.", "BAD_ENV");
-  return value;
+async function requireEnv(value: unknown): Promise<{ key: Environment; readOnly: boolean; requireWriteConfirm: boolean }> {
+  if (typeof value !== "string") throw new QueryError("Unknown environment.", "BAD_ENV");
+  const env = await environmentsService.get(value);
+  if (!env) throw new QueryError("Unknown environment.", "BAD_ENV");
+  return { key: env.key, readOnly: env.readOnly, requireWriteConfirm: env.requireWriteConfirm };
 }
 
 function msg(err: unknown): string {
@@ -33,7 +36,7 @@ export async function listDatabasesAction(
   environment: unknown,
 ): Promise<ListDatabasesResult> {
   try {
-    const env = asEnv(environment);
+    const env = (await requireEnv(environment)).key;
     return { ok: true, databases: await postgresQueryEngine.listDatabases(env) };
   } catch (err) {
     return { ok: false, error: msg(err) };
@@ -61,9 +64,9 @@ export interface ExecuteResult {
 export async function executeQueryAction(
   input: ExecuteInput,
 ): Promise<ExecuteResult> {
-  let env: Environment;
+  let env: { key: Environment; readOnly: boolean; requireWriteConfirm: boolean };
   try {
-    env = asEnv(input.environment);
+    env = await requireEnv(input.environment);
     assertSafeIdentifier(input.database);
   } catch (err) {
     return { ok: false, error: msg(err) };
@@ -74,9 +77,9 @@ export async function executeQueryAction(
 
   const classification = classifyQuery(query);
   const decision = evaluatePolicy({
-    environment: env,
     category: classification.category,
-    prodWritesDisabled: isProdWritesDisabled(),
+    readOnly: env.readOnly,
+    requireWriteConfirm: env.requireWriteConfirm,
   });
 
   if (!decision.allowed) {
@@ -95,9 +98,9 @@ export async function executeQueryAction(
 
   const queryType = classification.dangerousKeywords[0] ?? classification.statements[0] ?? "READ";
   try {
-    const result = await postgresQueryEngine.execute(env, input.database, query);
+    const result = await postgresQueryEngine.execute(env.key, input.database, query);
     await historyService.record({
-      environment: env,
+      environment: env.key,
       databaseName: input.database,
       query,
       queryType,
@@ -109,7 +112,7 @@ export async function executeQueryAction(
   } catch (err) {
     await historyService
       .record({
-        environment: env,
+        environment: env.key,
         databaseName: input.database,
         query,
         queryType,
@@ -128,7 +131,7 @@ export async function explainQueryAction(input: {
   query: string;
 }): Promise<ExecuteResult> {
   try {
-    const env = asEnv(input.environment);
+    const env = (await requireEnv(input.environment)).key;
     assertSafeIdentifier(input.database);
     const query = (input.query ?? "").trim();
     if (!query) return { ok: false, error: "Query is empty." };
@@ -144,7 +147,7 @@ export async function adminOverviewAction(
   environment: unknown,
 ): Promise<{ ok: boolean; overview?: ServerOverview; error?: string }> {
   try {
-    return { ok: true, overview: await adminService.overview(asEnv(environment)) };
+    return { ok: true, overview: await adminService.overview((await requireEnv(environment)).key) };
   } catch (err) {
     return { ok: false, error: msg(err) };
   }
@@ -155,7 +158,7 @@ export async function adminStorageAction(
   database: string,
 ): Promise<{ ok: boolean; storage?: AdminStorage; error?: string }> {
   try {
-    const env = asEnv(environment);
+    const env = (await requireEnv(environment)).key;
     if (database) assertSafeIdentifier(database);
     return { ok: true, storage: await adminService.storage(env, database) };
   } catch (err) {
@@ -167,7 +170,7 @@ export async function adminPerformanceAction(
   environment: unknown,
 ): Promise<{ ok: boolean; performance?: AdminPerformance; error?: string }> {
   try {
-    return { ok: true, performance: await adminService.performance(asEnv(environment)) };
+    return { ok: true, performance: await adminService.performance((await requireEnv(environment)).key) };
   } catch (err) {
     return { ok: false, error: msg(err) };
   }

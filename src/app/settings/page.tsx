@@ -1,6 +1,9 @@
-import { Cloud, Database } from "lucide-react";
+import { Cloud, Database, Layers } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { EnvironmentsSection } from "@/components/settings/environments-section";
+import { environmentsService } from "@/services/environments";
+import { toSummary } from "@/lib/environments";
 import {
   Card,
   CardContent,
@@ -19,6 +22,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const targets = await getAllTargetInfo();
+  const environments = (await environmentsService.list()).map(toSummary);
   const coolifyConfigured = await isCoolifyConfigured();
   // Base URL is not a secret, so we pre-fill it for display. The token is never
   // sent to the client.
@@ -31,8 +35,19 @@ export default async function SettingsPage() {
     <div>
       <PageHeader
         title="Settings"
-        description="PostgreSQL server targets and connection status."
+        description="Environments, database servers, and integrations."
       />
+
+      <div className="mb-10">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <Layers className="h-4 w-4" /> Environments
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Define the environments your infrastructure uses. Everything else —
+          databases, connections, and modules — is organized by these.
+        </p>
+        <EnvironmentsSection environments={environments} />
+      </div>
 
       <div>
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

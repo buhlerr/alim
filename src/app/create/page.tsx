@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateDatabaseForm } from "@/components/create/create-database-form";
 import { CreateEnvSetForm } from "@/components/create/create-env-set-form";
 import { getAllTargetInfo, type Environment } from "@/lib/targets";
+import { environmentsService } from "@/services/environments";
+import { toSummary } from "@/lib/environments";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ export default async function CreatePage({
 }) {
   const { mode } = await searchParams;
   const targets = await getAllTargetInfo();
+  const environments = (await environmentsService.list()).map(toSummary);
   const configured = targets.reduce(
     (acc, t) => {
       acc[t.environment as Environment] = t.configured;
@@ -52,10 +55,10 @@ export default async function CreatePage({
               <TabsTrigger value="set">Full environment set</TabsTrigger>
             </TabsList>
             <TabsContent value="single">
-              <CreateDatabaseForm configured={configured} />
+              <CreateDatabaseForm configured={configured} environments={environments} />
             </TabsContent>
             <TabsContent value="set">
-              <CreateEnvSetForm />
+              <CreateEnvSetForm environments={environments} />
             </TabsContent>
           </Tabs>
         </CardContent>
