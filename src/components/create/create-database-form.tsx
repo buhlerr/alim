@@ -123,7 +123,7 @@ export function CreateDatabaseForm({ configured }: Props) {
   if (result) {
     return (
       <ProvisionResultPanel
-        results={[{ ok: true, ...result }]}
+        results={[{ ...result, ok: true, environment: { key: result.environment, name: result.environment, color: "slate" } }]}
         onDone={resetForm}
         doneLabel="Create another"
       />

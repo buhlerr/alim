@@ -65,7 +65,9 @@ export const QueryHistoryPanel = React.forwardRef<
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <EnvironmentBadge environment={r.environment} />
+                  <EnvironmentBadge
+                    environment={{ name: r.environment, color: "slate" }}
+                  />
                   <Badge variant="outline" className="font-mono text-[10px]">
                     {r.queryType}
                   </Badge>

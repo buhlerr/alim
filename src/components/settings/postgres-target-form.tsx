@@ -100,7 +100,9 @@ export function PostgresTargetForm({ target }: { target: PostgresTargetView }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2 text-base">
-            <EnvironmentBadge environment={target.environment} />
+            <EnvironmentBadge
+              environment={{ name: target.environment, color: "slate" }}
+            />
           </CardTitle>
           {target.configured ? (
             <Badge variant="success">

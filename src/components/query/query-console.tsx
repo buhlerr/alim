@@ -360,7 +360,7 @@ export function QueryConsole({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        environment={environment}
+        environment={{ key: environment, name: environment, color: "slate" }}
         database={database || "—"}
         dangerousKeywords={dangerousKeywords}
         pending={running}

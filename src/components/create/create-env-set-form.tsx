@@ -43,7 +43,12 @@ export function CreateEnvSetForm() {
         notes,
       });
       if (res.results) {
-        setResults(res.results as ProvisionResultItem[]);
+        setResults(
+          res.results.map((r) => ({
+            ...r,
+            environment: { key: r.environment as string, name: r.environment as string, color: "slate" },
+          })) as ProvisionResultItem[],
+        );
         const okCount = res.results.filter((r) => r.ok).length;
         if (okCount === res.results.length) {
           toast.success("Full environment set provisioned.");

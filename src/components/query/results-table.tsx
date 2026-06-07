@@ -91,7 +91,9 @@ export function ResultsTable({
         </Stat>
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground">Env</span>
-          <EnvironmentBadge environment={environment} />
+          <EnvironmentBadge
+            environment={{ name: environment, color: "slate" }}
+          />
         </div>
         {result.command ? (
           <span className="text-xs text-muted-foreground">{result.command}</span>
