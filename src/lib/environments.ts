@@ -4,7 +4,11 @@
  * components and shared validation can import these freely.
  */
 
-export type Environment = "PRODUCTION" | "STAGING" | "DEVELOPMENT";
+/**
+ * An environment key. Once a compile-time union; now a runtime-defined string
+ * (the `Environment.key` column). The live list comes from `environmentsService`.
+ */
+export type Environment = string;
 
 export const ENVIRONMENTS: Environment[] = [
   "PRODUCTION",

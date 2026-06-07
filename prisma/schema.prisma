@@ -18,17 +18,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Environment {
-  PRODUCTION
-  STAGING
-  DEVELOPMENT
+/// User-defined environments. The stable `key` is referenced by other tables
+/// via foreign keys with onDelete: Restrict, so an environment in use cannot be
+/// deleted. `name`/color/flags are freely editable; `key` never changes.
+model Environment {
+  key                 String   @id
+  name                String
+  description         String?
+  color               String   @default("slate")
+  abbreviation        String?
+  sortOrder           Int      @default(0) @map("sort_order")
+  readOnly            Boolean  @default(false) @map("read_only")
+  requireWriteConfirm Boolean  @default(true) @map("require_write_confirm")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  provisionedDatabases ProvisionedDatabase[]
+  queryHistory         QueryHistory[]
+
+  @@map("environments")
 }
 
 /// One row per (database, server) the app has provisioned.
 model ProvisionedDatabase {
   id              String      @id @default(cuid())
   applicationName String      @map("application_name")
-  environment     Environment
+  environment     String
+  environmentRef  Environment @relation(fields: [environment], references: [key], onDelete: Restrict)
   databaseName    String      @map("database_name")
   username        String
   host            String
@@ -51,7 +67,8 @@ model ProvisionedDatabase {
 /// can review/re-run from history.
 model QueryHistory {
   id              String      @id @default(cuid())
-  environment     Environment
+  environment     String
+  environmentRef  Environment @relation(fields: [environment], references: [key], onDelete: Restrict)
   databaseName    String      @map("database_name")
   query           String
   queryType       String      @map("query_type")
