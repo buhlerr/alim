@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/table";
 import { getAllTargetInfo, type Environment } from "@/lib/targets";
 import { registryService } from "@/services/registry";
+import { MODULES, type AppModule } from "@/lib/modules";
+import { BRAND } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +45,7 @@ export default async function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description="Provision and track PostgreSQL databases across Aspyre Labs environments."
+        description={`${BRAND.appName}: provision databases and manage infrastructure across Aspyre Labs environments.`}
         action={
           <Button asChild>
             <Link href="/create">
@@ -52,6 +54,17 @@ export default async function DashboardPage() {
           </Button>
         }
       />
+
+      <section className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Modules
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {MODULES.map((m) => (
+            <ModuleCard key={m.id} module={m} />
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -216,5 +229,41 @@ function StatCard({
         <div className="text-2xl font-bold">{value}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function ModuleCard({ module: m }: { module: AppModule }) {
+  const Icon = m.icon;
+  const available = m.status === "available";
+  const inner = (
+    <Card
+      className={
+        available
+          ? "h-full transition-colors hover:border-primary/50"
+          : "h-full opacity-60"
+      }
+    >
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="flex items-center gap-2">
+          <Icon className="h-5 w-5 text-muted-foreground" />
+          <CardTitle className="text-base">{m.name}</CardTitle>
+        </div>
+        {available ? null : (
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">
+            Soon
+          </span>
+        )}
+      </CardHeader>
+      <CardContent>
+        <CardDescription>{m.description}</CardDescription>
+      </CardContent>
+    </Card>
+  );
+  return available ? (
+    <Link href={m.href} className="block">
+      {inner}
+    </Link>
+  ) : (
+    <div>{inner}</div>
   );
 }
