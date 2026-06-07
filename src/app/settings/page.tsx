@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Cloud, Info } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { EnvironmentBadge } from "@/components/environment-badge";
@@ -12,11 +12,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAllTargetInfo, type Environment } from "@/lib/targets";
+import { CoolifySettingsForm } from "@/components/settings/coolify-settings-form";
+import { isCoolifyConfigured } from "@/lib/coolify-config";
 
 export const dynamic = "force-dynamic";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
   const targets = getAllTargetInfo();
+  const coolifyConfigured = await isCoolifyConfigured();
 
   return (
     <div>
@@ -88,6 +91,30 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <Cloud className="h-4 w-4" /> Coolify
+        </h2>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">Coolify API connection</CardTitle>
+              {coolifyConfigured ? (
+                <Badge variant="success">Configured</Badge>
+              ) : (
+                <Badge variant="outline">Not configured</Badge>
+              )}
+            </div>
+            <CardDescription>
+              Stored encrypted (AES-256-GCM). Requires ENCRYPTION_KEY to be set.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CoolifySettingsForm configured={coolifyConfigured} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

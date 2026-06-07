@@ -1,8 +1,6 @@
-# DB Provisioner
+# Aspyre Infrastructure Manager
 
-An internal Aspyre Labs tool for provisioning PostgreSQL **databases, users, and
-permissions** across multiple PostgreSQL servers (Production / Staging /
-Development) from a single admin dashboard.
+Aspyre Labs' internal platform for centralized infrastructure administration. It began as the DB Provisioner (PostgreSQL database/user/permission provisioning + SQL console) and is evolving into a modular platform that also manages Coolify applications, with Nginx Proxy Manager, Cloudflare, and full deployment automation planned. The original DB provisioning features are unchanged and remain the "Databases" module.
 
 > **No authentication (v1).** This app is designed to run on a trusted internal
 > network only. Do not expose it to the public internet.
