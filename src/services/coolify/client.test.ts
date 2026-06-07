@@ -81,4 +81,18 @@ describe("coolifyFetch", () => {
     mockFetchOnce({ ok: true, status: 204 });
     expect(await coolifyFetch({ path: "/applications/x/envs", method: "POST" })).toBeUndefined();
   });
+
+  it("returns the raw text when the body is not JSON (e.g. /version)", async () => {
+    // Coolify's /version returns a bare string like 4.1.2 with a text/html
+    // content type — JSON.parse would throw, so the client must fall back.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => "4.1.2",
+      })),
+    );
+    expect(await coolifyFetch<string>({ path: "/version" })).toBe("4.1.2");
+  });
 });
