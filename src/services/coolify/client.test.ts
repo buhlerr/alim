@@ -74,7 +74,7 @@ describe("coolifyFetch", () => {
     mockFetchOnce({ ok: false, status: 404, body: { message: "Not found" } });
     const err = await coolifyFetch({ path: "/applications/zzz" }).catch((e) => e);
     expect(err).toBeInstanceOf(CoolifyError);
-    expect(err.code).toBe("HTTP_404");
+    expect((err as CoolifyError).code).toBe("HTTP_404");
   });
 
   it("returns undefined for 204 No Content", async () => {
