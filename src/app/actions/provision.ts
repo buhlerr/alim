@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache";
 import {
   createDatabaseSchema,
   createEnvSetSchema,
+  postgresConnectionSchema,
 } from "@/lib/validation";
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
 import { generatePassword } from "@/lib/password";
-import { ENVIRONMENTS, type Environment } from "@/lib/targets";
+import {
+  ENVIRONMENTS,
+  POSTGRES_SETTING_KEYS,
+  type Environment,
+} from "@/lib/targets";
 import { postgresProvisioner } from "@/services/provisioning/postgres";
 import { ProvisioningError } from "@/services/provisioning/types";
 import { registryService } from "@/services/registry";
+import { settingsService } from "@/services/settings";
 
 /** Client-safe shape returned after a successful single provision. */
 export interface ProvisionActionResult {
@@ -196,4 +202,64 @@ export async function testConnectionAction(
     return { ok: false, message: "Unknown environment." };
   }
   return postgresProvisioner.testConnection(environment);
+}
+
+export interface SaveTargetResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Store an environment's admin connection string (encrypted) in the settings
+ * store. This is the preferred source over the POSTGRES_*_URL env vars.
+ */
+export async function savePostgresTargetAction(
+  environment: Environment,
+  connectionString: unknown,
+): Promise<SaveTargetResult> {
+  if (!ENVIRONMENTS.includes(environment)) {
+    return { ok: false, error: "Unknown environment." };
+  }
+  const parsed = postgresConnectionSchema.safeParse(connectionString);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid connection string.",
+    };
+  }
+  try {
+    await settingsService.set(POSTGRES_SETTING_KEYS[environment], parsed.data.trim());
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+    revalidatePath("/create");
+    revalidatePath("/query");
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      error: "Could not save the connection. Is ENCRYPTION_KEY configured?",
+    };
+  }
+}
+
+/**
+ * Remove an environment's stored connection string. The target then falls back
+ * to its POSTGRES_*_URL env var (if any), or becomes unconfigured.
+ */
+export async function clearPostgresTargetAction(
+  environment: Environment,
+): Promise<SaveTargetResult> {
+  if (!ENVIRONMENTS.includes(environment)) {
+    return { ok: false, error: "Unknown environment." };
+  }
+  try {
+    await settingsService.delete(POSTGRES_SETTING_KEYS[environment]);
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+    revalidatePath("/create");
+    revalidatePath("/query");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not clear the connection." };
+  }
 }

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const [stats, recent, targets] = await Promise.all([
     registryService.stats(),
     registryService.recent(8),
-    Promise.resolve(getAllTargetInfo()),
+    getAllTargetInfo(),
   ]);
 
   const configuredCount = targets.filter((t) => t.configured).length;
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle>Server targets</CardTitle>
             <CardDescription>
-              Configured via environment variables. Manage on the Settings page.
+              Manage these on the Settings page.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

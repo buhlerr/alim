@@ -11,7 +11,7 @@ import { historyService } from "@/services/query/history";
 export const dynamic = "force-dynamic";
 
 export default async function QueryPage() {
-  const targets = getAllTargetInfo();
+  const targets = await getAllTargetInfo();
   const configured = targets.reduce(
     (acc, t) => {
       acc[t.environment as Environment] = t.configured;

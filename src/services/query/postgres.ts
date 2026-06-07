@@ -36,8 +36,11 @@ function toQueryError(err: unknown): QueryError {
   }
 }
 
-function connectionFor(environment: Environment, database?: string): string {
-  const adminUrl = getAdminUrl(environment);
+async function connectionFor(
+  environment: Environment,
+  database?: string,
+): Promise<string> {
+  const adminUrl = await getAdminUrl(environment);
   if (!adminUrl) {
     throw new QueryError(
       `The ${environment} server is not configured.`,
@@ -93,7 +96,7 @@ export class PostgresQueryEngine implements QueryEngine {
   readonly kind = "postgres" as const;
 
   async listDatabases(environment: Environment): Promise<string[]> {
-    return withClient(connectionFor(environment), async (client) => {
+    return withClient(await connectionFor(environment), async (client) => {
       const res = await client.query(
         `SELECT datname FROM pg_database
          WHERE datistemplate = false AND datallowconn = true
@@ -108,7 +111,9 @@ export class PostgresQueryEngine implements QueryEngine {
     database: string,
     sql: string,
   ): Promise<QueryResult> {
-    return withClient(connectionFor(environment, database), async (client) => {
+    return withClient(
+      await connectionFor(environment, database),
+      async (client) => {
       const start = Date.now();
       try {
         const res = await client.query(sql);
@@ -130,7 +135,9 @@ export class PostgresQueryEngine implements QueryEngine {
       .trim()
       .replace(/;+\s*$/, "")
       .replace(/^\s*EXPLAIN\s+(ANALYZE\s+)?(VERBOSE\s+)?/i, "");
-    return withClient(connectionFor(environment, database), async (client) => {
+    return withClient(
+      await connectionFor(environment, database),
+      async (client) => {
       const start = Date.now();
       try {
         const res = await client.query(`EXPLAIN ${inner}`);
@@ -142,7 +149,7 @@ export class PostgresQueryEngine implements QueryEngine {
   }
 
   async overview(environment: Environment): Promise<ServerOverview> {
-    return withClient(connectionFor(environment), async (client) => {
+    return withClient(await connectionFor(environment), async (client) => {
       const res = await client.query(`
         SELECT
           (SELECT count(*) FROM pg_database WHERE datistemplate = false) AS total_databases,
