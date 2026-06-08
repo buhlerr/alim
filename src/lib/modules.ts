@@ -103,9 +103,9 @@ export const MODULES: AppModule[] = [
     description: "One-shot wizard that orchestrates all underlying systems.",
     icon: Rocket,
     href: "/deploy",
-    status: "coming-soon",
+    status: "available",
     group: "platform",
-    nav: [],
+    nav: [{ href: "/deploy", label: "Deploy", icon: Rocket }],
   },
   {
     id: "secrets",
