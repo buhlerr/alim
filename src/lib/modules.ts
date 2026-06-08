@@ -83,9 +83,9 @@ export const MODULES: AppModule[] = [
     description: "Manage Nginx Proxy Manager hosts, SSL, and security.",
     icon: Network,
     href: "/npm",
-    status: "coming-soon",
+    status: "available",
     group: "infrastructure",
-    nav: [],
+    nav: [{ href: "/npm", label: "Proxy Hosts", icon: Network }],
   },
   {
     id: "cloudflare",

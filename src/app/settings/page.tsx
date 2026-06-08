@@ -1,4 +1,4 @@
-import { Cloud, Database, Layers } from "lucide-react";
+import { Cloud, Database, Layers, Network } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { EnvironmentsSection } from "@/components/settings/environments-section";
@@ -15,7 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { getAllTargetInfo } from "@/lib/targets";
 import { PostgresTargetForm } from "@/components/settings/postgres-target-form";
 import { CoolifySettingsForm } from "@/components/settings/coolify-settings-form";
+import { NpmSettingsForm } from "@/components/settings/npm-settings-form";
 import { COOLIFY_SETTING_KEYS, isCoolifyConfigured } from "@/lib/coolify-config";
+import { NPM_SETTING_KEYS, isNpmConfigured } from "@/lib/npm-config";
 import { settingsService } from "@/services/settings";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,17 @@ export default async function SettingsPage() {
   const coolifyBaseUrl =
     (await settingsService.get(COOLIFY_SETTING_KEYS.baseUrl)) ??
     process.env.COOLIFY_BASE_URL ??
+    "";
+  const npmConfigured = await isNpmConfigured();
+  // Base URL and email are not secrets, so we pre-fill them. The password is
+  // never sent to the client.
+  const npmBaseUrl =
+    (await settingsService.get(NPM_SETTING_KEYS.baseUrl)) ??
+    process.env.NPM_BASE_URL ??
+    "";
+  const npmIdentity =
+    (await settingsService.get(NPM_SETTING_KEYS.identity)) ??
+    process.env.NPM_IDENTITY ??
     "";
 
   return (
@@ -88,6 +101,35 @@ export default async function SettingsPage() {
             <CoolifySettingsForm
               configured={coolifyConfigured}
               initialBaseUrl={coolifyBaseUrl}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <Network className="h-4 w-4" /> Nginx Proxy Manager
+        </h2>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">Nginx Proxy Manager connection</CardTitle>
+              {npmConfigured ? (
+                <Badge variant="success">Configured</Badge>
+              ) : (
+                <Badge variant="outline">Not configured</Badge>
+              )}
+            </div>
+            <CardDescription>
+              Email + password are stored encrypted (AES-256-GCM). A short-lived
+              API token is minted automatically. Requires ENCRYPTION_KEY.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NpmSettingsForm
+              configured={npmConfigured}
+              initialBaseUrl={npmBaseUrl}
+              initialIdentity={npmIdentity}
             />
           </CardContent>
         </Card>
