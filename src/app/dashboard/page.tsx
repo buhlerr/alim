@@ -5,6 +5,10 @@ import {
   PlusCircle,
   Server,
   ListChecks,
+  CheckCircle2,
+  XCircle,
+  ScrollText,
+  Plug,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -25,21 +29,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { getAllTargetInfo } from "@/lib/targets";
 import { toSummary } from "@/lib/environments";
 import { environmentsService } from "@/services/environments";
 import { registryService } from "@/services/registry";
+import { getIntegrationOverview, type IntegrationStatus } from "@/services/dashboard";
+import { auditService, type AuditLogRow } from "@/services/audit";
+import { actionLabel } from "@/lib/audit";
 import { MODULES, type AppModule } from "@/lib/modules";
 import { BRAND } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, recent, targets, envRows] = await Promise.all([
+  const [stats, recent, targets, envRows, integrations, activity] = await Promise.all([
     registryService.stats(),
     registryService.recent(8),
     getAllTargetInfo(),
     environmentsService.list(),
+    getIntegrationOverview(),
+    auditService.list({ limit: 6 }),
   ]);
 
   const environments = envRows.map(toSummary);
@@ -96,6 +106,17 @@ export default async function DashboardPage() {
           icon={<Server className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Integrations
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {integrations.map((s) => (
+            <IntegrationCard key={s.id} status={s} />
+          ))}
+        </div>
+      </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Quick actions */}
@@ -208,6 +229,90 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Recent activity (audit) */}
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Recent activity</CardTitle>
+            <CardDescription>The latest actions across the platform.</CardDescription>
+          </div>
+          <Link
+            href="/audit"
+            className="flex items-center gap-1 text-xs text-muted-foreground underline"
+          >
+            <ScrollText className="h-3.5 w-3.5" /> View all
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {activity.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {activity.map((entry) => (
+                <ActivityRow key={entry.id} entry={entry} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function IntegrationCard({ status }: { status: IntegrationStatus }) {
+  return (
+    <Link href={status.href} className="block">
+      <Card className="h-full transition-colors hover:border-primary/50">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base">{status.name}</CardTitle>
+          {!status.configured ? (
+            <Badge variant="outline">Not configured</Badge>
+          ) : status.reachable ? (
+            <Badge variant="success">
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Connected
+            </Badge>
+          ) : (
+            <Badge variant="destructive">
+              <XCircle className="mr-1 h-3 w-3" /> Unreachable
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {status.reachable ? (
+            <div className="text-2xl font-bold">
+              {status.count}{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                {status.countLabel}
+              </span>
+            </div>
+          ) : (
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Plug className="h-3.5 w-3.5" />
+              {status.configured ? "Could not reach the service" : "Configure in Settings"}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function ActivityRow({ entry }: { entry: AuditLogRow }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+      <div className="flex min-w-0 items-center gap-2">
+        {entry.success ? (
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+        ) : (
+          <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+        )}
+        <span className="shrink-0 font-medium">{actionLabel(entry.action)}</span>
+        <span className="truncate text-muted-foreground">{entry.summary}</span>
+      </div>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {entry.createdAt.toLocaleString()}
+      </span>
     </div>
   );
 }
