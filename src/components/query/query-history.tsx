@@ -6,6 +6,7 @@ import { CheckCircle2, History, Loader2, RefreshCw, XCircle } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EnvironmentBadge } from "@/components/environment-badge";
+import { ClientTime } from "@/components/ui/client-time";
 import type { EnvironmentSummary } from "@/lib/environments";
 import { recentHistoryAction, type HistoryDTO } from "@/app/actions/query";
 
@@ -83,9 +84,10 @@ export const QueryHistoryPanel = React.forwardRef<
                   {r.executionTimeMs != null ? (
                     <span className="text-[11px] text-muted-foreground">{r.executionTimeMs} ms</span>
                   ) : null}
-                  <span className="ml-auto text-[11px] text-muted-foreground">
-                    {new Date(r.executedAt).toLocaleString()}
-                  </span>
+                  <ClientTime
+                    iso={r.executedAt}
+                    className="ml-auto text-[11px] text-muted-foreground"
+                  />
                 </div>
                 <p className="mt-1 truncate font-mono text-xs">{r.query.replace(/\s+/g, " ")}</p>
                 {r.errorMessage ? (

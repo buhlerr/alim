@@ -3,9 +3,9 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   darkMode: ["class"],
   content: [
-    "./src/pages/**/*.{ts,tsx}",
-    "./src/components/**/*.{ts,tsx}",
-    "./src/app/**/*.{ts,tsx}",
+    // Scan all of src so utility classes defined outside components (e.g. the
+    // environment color palette in src/lib) aren't purged from the CSS.
+    "./src/**/*.{ts,tsx}",
   ],
   theme: {
     container: {

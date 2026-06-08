@@ -29,6 +29,7 @@ import {
   AUDIT_TARGET_TYPES,
   actionLabel,
 } from "@/lib/audit";
+import { ClientTime } from "@/components/ui/client-time";
 
 export interface AuditRow {
   id: string;
@@ -50,18 +51,6 @@ export interface AuditFilters {
 }
 
 const ALL = "__all__";
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
 
 export function AuditView({
   rows,
@@ -221,11 +210,8 @@ function AuditEntry({ row }: { row: AuditRow }) {
             )
           ) : null}
         </TableCell>
-        <TableCell
-          className="whitespace-nowrap text-sm text-muted-foreground"
-          title={new Date(row.createdAt).toLocaleString()}
-        >
-          {relativeTime(row.createdAt)}
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+          <ClientTime iso={row.createdAt} relative />
         </TableCell>
         <TableCell>
           <Badge variant="secondary">{actionLabel(row.action)}</Badge>
