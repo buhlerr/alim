@@ -7,6 +7,11 @@ export interface CfRequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  /**
+   * Verify a specific token instead of the saved/env credentials — used to test
+   * a token the user has typed but not yet saved. The token is never persisted.
+   */
+  tokenOverride?: string;
 }
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
@@ -44,12 +49,24 @@ function httpError(status: number): CloudflareError {
  * failures into `CloudflareError` (never leaking the token or raw bodies).
  */
 export async function cfFetch<T>(opts: CfRequestOptions): Promise<T> {
-  const config = await getCloudflareConfig();
-  if (!config) {
-    throw new CloudflareError(
-      "Cloudflare is not configured. Add an API token in Settings.",
-      "NOT_CONFIGURED",
-    );
+  let apiToken: string;
+  if (opts.tokenOverride !== undefined) {
+    apiToken = opts.tokenOverride.trim();
+    if (!apiToken) {
+      throw new CloudflareError(
+        "No API token provided to verify.",
+        "NOT_CONFIGURED",
+      );
+    }
+  } else {
+    const config = await getCloudflareConfig();
+    if (!config) {
+      throw new CloudflareError(
+        "Cloudflare is not configured. Add an API token in Settings.",
+        "NOT_CONFIGURED",
+      );
+    }
+    apiToken = config.apiToken;
   }
 
   const url = new URL(`${API_BASE}${opts.path}`);
@@ -64,7 +81,7 @@ export async function cfFetch<T>(opts: CfRequestOptions): Promise<T> {
     res = await fetch(url, {
       method: opts.method ?? "GET",
       headers: {
-        Authorization: `Bearer ${config.apiToken}`,
+        Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },

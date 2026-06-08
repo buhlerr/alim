@@ -49,13 +49,16 @@ export function CloudflareSettingsForm({
     setTesting(true);
     setTest(null);
     try {
-      setTest(await testCloudflareConnectionAction());
+      // Test the typed token if present, else fall back to the saved one.
+      setTest(await testCloudflareConnectionAction({ apiToken: apiToken.trim() }));
     } catch {
       setTest({ ok: false, message: "Test failed unexpectedly." });
     } finally {
       setTesting(false);
     }
   }
+
+  const canTest = apiToken.trim().length > 0 || configured;
 
   return (
     <form onSubmit={onSave} className="space-y-4">
@@ -78,6 +81,19 @@ export function CloudflareSettingsForm({
         {fieldErrors.apiToken ? (
           <p className="text-xs text-destructive">{fieldErrors.apiToken[0]}</p>
         ) : null}
+        <p className="text-xs text-muted-foreground">
+          Use an <strong className="font-semibold text-foreground">API Token</strong>{" "}
+          (Cloudflare → My Profile → API Tokens → Create Token) — not your Global
+          API Key.{" "}
+          <a
+            href="https://dash.cloudflare.com/profile/api-tokens"
+            target="_blank"
+            rel="noreferrer"
+            className="text-signal underline underline-offset-2"
+          >
+            Create one →
+          </a>
+        </p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="cf-account">
@@ -91,6 +107,10 @@ export function CloudflareSettingsForm({
           onChange={(e) => setAccountId(e.target.value)}
           className="font-mono"
         />
+        <p className="text-xs text-muted-foreground">
+          Identifies your whole Cloudflare account (covers all domains). Only the
+          Tunnels features need it; DNS and TLS work with the token alone.
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={saving}>
@@ -101,26 +121,26 @@ export function CloudflareSettingsForm({
           type="button"
           variant="outline"
           onClick={onTest}
-          disabled={testing || !configured}
+          disabled={testing || !canTest}
         >
           {testing ? <Loader2 className="animate-spin" /> : <Plug />}
           Test connection
         </Button>
-        {test ? (
-          <span
-            className={`flex items-center gap-1 text-xs ${
-              test.ok ? "text-emerald-600" : "text-destructive"
-            }`}
-          >
-            {test.ok ? (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            ) : (
-              <XCircle className="h-3.5 w-3.5" />
-            )}
-            {test.ok ? "Token valid" : test.message}
-          </span>
-        ) : null}
       </div>
+      {test ? (
+        <p
+          className={`flex items-start gap-1.5 text-xs ${
+            test.ok ? "text-ok" : "text-destructive"
+          }`}
+        >
+          {test.ok ? (
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          )}
+          <span>{test.message}</span>
+        </p>
+      ) : null}
     </form>
   );
 }
