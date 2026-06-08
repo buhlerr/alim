@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { isCloudflareConfigured } from "@/lib/cloudflare-config";
 import { getTunnelsAction, getZonesAction } from "@/app/actions/cloudflare";
 import { CloudflareManager } from "@/components/cloudflare/cloudflare-manager";
@@ -31,6 +33,20 @@ export default async function CloudflarePage() {
     );
   }
 
+  return (
+    <div>
+      <PageHeader
+        title="Cloudflare"
+        description="Manage tunnels, DNS records, and TLS settings."
+      />
+      <Suspense fallback={<ListSkeleton />}>
+        <CloudflareContent />
+      </Suspense>
+    </div>
+  );
+}
+
+async function CloudflareContent() {
   const [tunnels, zones] = await Promise.all([getTunnelsAction(), getZonesAction()]);
 
   // Zones power the DNS/TLS tabs; a tunnel failure (e.g. no account ID) should
@@ -38,16 +54,10 @@ export default async function CloudflarePage() {
   const error = !zones.ok ? zones.error : undefined;
 
   return (
-    <div>
-      <PageHeader
-        title="Cloudflare"
-        description="Manage tunnels, DNS records, and TLS settings."
-      />
-      <CloudflareManager
-        tunnels={tunnels.data ?? []}
-        zones={zones.data ?? []}
-        error={error}
-      />
-    </div>
+    <CloudflareManager
+      tunnels={tunnels.data ?? []}
+      zones={zones.data ?? []}
+      error={error}
+    />
   );
 }
