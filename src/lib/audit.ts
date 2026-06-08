@@ -49,6 +49,7 @@ export const AUDIT_ACTIONS = {
   CF_DNS_UPDATE: "cloudflare.dns.update",
   CF_DNS_DELETE: "cloudflare.dns.delete",
   CF_TLS_UPDATE: "cloudflare.tls.update",
+  DEPLOYMENT_RUN: "deployment.run",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -67,6 +68,7 @@ export const AUDIT_TARGET_TYPES = {
   CF_TUNNEL: "cf_tunnel",
   CF_DNS_RECORD: "cf_dns_record",
   CF_ZONE: "cf_zone",
+  DEPLOYMENT: "deployment",
 } as const;
 
 export type AuditTargetType =
@@ -117,6 +119,7 @@ export function actionLabel(action: string): string {
     [AUDIT_ACTIONS.CF_DNS_UPDATE]: "Updated DNS record",
     [AUDIT_ACTIONS.CF_DNS_DELETE]: "Deleted DNS record",
     [AUDIT_ACTIONS.CF_TLS_UPDATE]: "Updated TLS settings",
+    [AUDIT_ACTIONS.DEPLOYMENT_RUN]: "Ran deployment",
   };
   return labels[action] ?? action;
 }
