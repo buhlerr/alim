@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BRAND } from "@/lib/brand";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -117,10 +118,9 @@ export function AppBar() {
       : "bg-danger shadow-[0_0_8px_hsl(var(--danger))]";
 
   return (
-    <header className="sticky top-0 z-40 hidden items-center gap-6 border-b border-border bg-background/70 px-6 py-3 backdrop-blur-md backdrop-saturate-150 md:flex">
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-signal shadow-[0_0_8px_hsl(var(--signal))]" />
-        Control Surface
+    <header className="sticky top-0 z-40 hidden h-16 items-center gap-6 border-b border-border bg-background/70 px-6 backdrop-blur-md backdrop-saturate-150 md:flex">
+      <div className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-transparent">
+        {BRAND.shortName}
       </div>
 
       <div className="ml-auto flex items-center gap-6 font-mono text-[11px]">

@@ -1,6 +1,6 @@
 {
   "name": "aspyre-devops",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Aspyre Labs internal platform for centralized infrastructure administration: database provisioning, SQL console, and Coolify application management.",
   "scripts": {

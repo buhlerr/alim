@@ -74,19 +74,13 @@ const ALL_ITEMS: NavItem[] = SIDEBAR.flatMap((s) => s.items);
 
 function Brand() {
   return (
-    <div className="flex flex-col items-start gap-3 border-b border-border px-5 py-5">
+    <div className="flex h-16 items-center border-b border-border px-4">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/aspyrelabs-logo.svg"
         alt="Aspyrelabs"
-        className="w-full max-w-[190px]"
+        className="w-full max-w-[160px]"
       />
-      <div className="flex items-center gap-2.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d]" />
-        <span className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-transparent">
-          {BRAND.shortName}
-        </span>
-      </div>
     </div>
   );
 }
