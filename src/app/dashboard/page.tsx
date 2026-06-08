@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Database,
@@ -8,7 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   ScrollText,
-  Plug,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
@@ -29,12 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { getAllTargetInfo } from "@/lib/targets";
 import { toSummary } from "@/lib/environments";
 import { environmentsService } from "@/services/environments";
 import { registryService } from "@/services/registry";
-import { getIntegrationOverview, type IntegrationStatus } from "@/services/dashboard";
+import {
+  IntegrationsSection,
+  IntegrationsSkeleton,
+} from "@/components/dashboard/integrations-section";
 import { auditService, type AuditLogRow } from "@/services/audit";
 import { actionLabel } from "@/lib/audit";
 import { MODULES, type AppModule } from "@/lib/modules";
@@ -43,12 +45,13 @@ import { BRAND } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, recent, targets, envRows, integrations, activity] = await Promise.all([
+  // Fast local reads only — the (possibly slow) integration status calls are
+  // streamed separately via Suspense so they don't block first paint.
+  const [stats, recent, targets, envRows, activity] = await Promise.all([
     registryService.stats(),
     registryService.recent(8),
     getAllTargetInfo(),
     environmentsService.list(),
-    getIntegrationOverview(),
     auditService.list({ limit: 6 }),
   ]);
 
@@ -111,11 +114,9 @@ export default async function DashboardPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Integrations
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {integrations.map((s) => (
-            <IntegrationCard key={s.id} status={s} />
-          ))}
-        </div>
+        <Suspense fallback={<IntegrationsSkeleton />}>
+          <IntegrationsSection />
+        </Suspense>
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -257,44 +258,6 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function IntegrationCard({ status }: { status: IntegrationStatus }) {
-  return (
-    <Link href={status.href} className="block">
-      <Card className="h-full transition-colors hover:border-primary/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base">{status.name}</CardTitle>
-          {!status.configured ? (
-            <Badge variant="outline">Not configured</Badge>
-          ) : status.reachable ? (
-            <Badge variant="success">
-              <CheckCircle2 className="mr-1 h-3 w-3" /> Connected
-            </Badge>
-          ) : (
-            <Badge variant="destructive">
-              <XCircle className="mr-1 h-3 w-3" /> Unreachable
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent>
-          {status.reachable ? (
-            <div className="text-2xl font-bold">
-              {status.count}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
-                {status.countLabel}
-              </span>
-            </div>
-          ) : (
-            <p className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Plug className="h-3.5 w-3.5" />
-              {status.configured ? "Could not reach the service" : "Configure in Settings"}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
 
