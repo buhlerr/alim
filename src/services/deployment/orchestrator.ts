@@ -3,6 +3,7 @@ import { postgresProvisioner } from "@/services/provisioning/postgres";
 import { registryService } from "@/services/registry";
 import { coolifyService } from "@/services/coolify/service";
 import { cloudflareService } from "@/services/cloudflare/service";
+import { npmService } from "@/services/npm/service";
 import { environmentsService } from "@/services/environments";
 import { deriveDatabaseName, deriveUsername } from "@/lib/naming";
 import { generatePassword } from "@/lib/password";
@@ -71,6 +72,21 @@ async function runCoolify(plan: DeploymentPlan): Promise<DeploymentStepResult> {
   }
 }
 
+async function runNpm(plan: DeploymentPlan): Promise<DeploymentStepResult> {
+  const base: DeploymentStepResult = { key: "npm", label: "Proxy host", status: "skipped" };
+  if (!plan.npm) return base;
+  try {
+    await npmService.proxyHosts.create(plan.npm);
+    return {
+      ...base,
+      status: "success",
+      detail: `${plan.npm.domain_names.join(", ")} → ${plan.npm.forward_scheme}://${plan.npm.forward_host}:${plan.npm.forward_port}`,
+    };
+  } catch (err) {
+    return { ...base, status: "failed", error: safeMessage(err) };
+  }
+}
+
 async function runDns(plan: DeploymentPlan): Promise<DeploymentStepResult> {
   const base: DeploymentStepResult = { key: "dns", label: "Cloudflare DNS", status: "skipped" };
   if (!plan.dns) return base;
@@ -98,6 +114,7 @@ export async function runDeployment(plan: DeploymentPlan): Promise<DeploymentRes
   const steps: DeploymentStepResult[] = [
     await runDatabase(plan),
     await runCoolify(plan),
+    await runNpm(plan),
     await runDns(plan),
   ];
   const ok = steps.every((s) => s.status !== "failed");

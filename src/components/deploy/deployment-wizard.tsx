@@ -50,6 +50,13 @@ interface CoolifyDraft {
   domains: string;
 }
 
+interface NpmDraft {
+  domain_names: string;
+  forward_scheme: string;
+  forward_host: string;
+  forward_port: string;
+}
+
 interface DnsDraft {
   type: string;
   name: string;
@@ -75,6 +82,13 @@ export function DeploymentWizard({ options }: { options: DeploymentOptions }) {
     name: "",
     domains: "",
   });
+  const [npmEnabled, setNpmEnabled] = React.useState(false);
+  const [npm, setNpm] = React.useState<NpmDraft>({
+    domain_names: "",
+    forward_scheme: "http",
+    forward_host: "",
+    forward_port: "3000",
+  });
   const [dnsEnabled, setDnsEnabled] = React.useState(false);
   const [dnsZoneId, setDnsZoneId] = React.useState(options.cloudflare.zones[0]?.id ?? "");
   const [dns, setDns] = React.useState<DnsDraft>({
@@ -91,6 +105,9 @@ export function DeploymentWizard({ options }: { options: DeploymentOptions }) {
   function setCf<K extends keyof CoolifyDraft>(k: K, v: CoolifyDraft[K]) {
     setCoolify((p) => ({ ...p, [k]: v }));
   }
+  function setNpmField<K extends keyof NpmDraft>(k: K, v: NpmDraft[K]) {
+    setNpm((p) => ({ ...p, [k]: v }));
+  }
   function setDnsField<K extends keyof DnsDraft>(k: K, v: DnsDraft[K]) {
     setDns((p) => ({ ...p, [k]: v }));
   }
@@ -106,6 +123,8 @@ export function DeploymentWizard({ options }: { options: DeploymentOptions }) {
         databaseEnvironment,
         coolifyEnabled,
         coolify,
+        npmEnabled,
+        npm,
         dnsEnabled,
         dnsZoneId,
         dns,
@@ -265,6 +284,59 @@ export function DeploymentWizard({ options }: { options: DeploymentOptions }) {
         {errors.coolify ? (
           <p className="mt-2 text-xs text-destructive">{errors.coolify[0]}</p>
         ) : null}
+      </StepCard>
+
+      {/* NPM proxy host step */}
+      <StepCard
+        title="Nginx Proxy Manager"
+        description="Expose the app through a proxy host."
+        enabled={npmEnabled}
+        onToggle={setNpmEnabled}
+        available={options.npm.configured}
+        unavailableNote="Nginx Proxy Manager is not configured."
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Domain names</Label>
+            <Input
+              value={npm.domain_names}
+              onChange={(e) => setNpmField("domain_names", e.target.value)}
+              placeholder="app.example.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Forward scheme</Label>
+            <Select
+              value={npm.forward_scheme}
+              onValueChange={(v) => setNpmField("forward_scheme", v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="http">http</SelectItem>
+                <SelectItem value="https">https</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Forward host</Label>
+            <Input
+              value={npm.forward_host}
+              onChange={(e) => setNpmField("forward_host", e.target.value)}
+              placeholder="10.0.0.5 or container name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Forward port</Label>
+            <Input
+              value={npm.forward_port}
+              onChange={(e) => setNpmField("forward_port", e.target.value)}
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+        {errors.npm ? <p className="mt-2 text-xs text-destructive">{errors.npm[0]}</p> : null}
       </StepCard>
 
       {/* Cloudflare DNS step */}

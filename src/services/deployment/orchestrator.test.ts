@@ -12,6 +12,9 @@ vi.mock("@/services/coolify/service", () => ({
 vi.mock("@/services/cloudflare/service", () => ({
   cloudflareService: { dns: { create: vi.fn() } },
 }));
+vi.mock("@/services/npm/service", () => ({
+  npmService: { proxyHosts: { create: vi.fn() } },
+}));
 vi.mock("@/services/environments", () => ({
   environmentsService: { get: vi.fn() },
 }));
@@ -20,6 +23,7 @@ import { postgresProvisioner } from "@/services/provisioning/postgres";
 import { registryService } from "@/services/registry";
 import { coolifyService } from "@/services/coolify/service";
 import { cloudflareService } from "@/services/cloudflare/service";
+import { npmService } from "@/services/npm/service";
 import { environmentsService } from "@/services/environments";
 import { runDeployment } from "./orchestrator";
 import type { DeploymentPlan } from "./types";
@@ -29,14 +33,34 @@ const record = registryService.record as unknown as ReturnType<typeof vi.fn>;
 const createApp = coolifyService.createApplication as unknown as ReturnType<typeof vi.fn>;
 const deploy = coolifyService.deploy as unknown as ReturnType<typeof vi.fn>;
 const dnsCreate = cloudflareService.dns.create as unknown as ReturnType<typeof vi.fn>;
+const npmCreate = npmService.proxyHosts.create as unknown as ReturnType<typeof vi.fn>;
 const envGet = environmentsService.get as unknown as ReturnType<typeof vi.fn>;
 
 const EMPTY: DeploymentPlan = {
   applicationName: "myapp",
   database: null,
   coolify: null,
+  npm: null,
   dns: null,
 };
+
+function proxyReq() {
+  return {
+    domain_names: ["app.example.com"],
+    forward_scheme: "http" as const,
+    forward_host: "10.0.0.5",
+    forward_port: 3000,
+    certificate_id: 0,
+    ssl_forced: false,
+    http2_support: false,
+    hsts_enabled: false,
+    block_exploits: true,
+    caching_enabled: false,
+    allow_websocket_upgrade: true,
+    access_list_id: 0,
+    advanced_config: "",
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -55,14 +79,30 @@ beforeEach(() => {
   createApp.mockResolvedValue({ uuid: "app-123" });
   deploy.mockResolvedValue({ message: "queued" });
   dnsCreate.mockResolvedValue({ id: "dns-1" });
+  npmCreate.mockResolvedValue({ id: 42 });
 });
 
 describe("runDeployment", () => {
   it("skips every step when nothing is enabled", async () => {
     const res = await runDeployment(EMPTY);
     expect(res.ok).toBe(true);
-    expect(res.steps.map((s) => s.status)).toEqual(["skipped", "skipped", "skipped"]);
+    expect(res.steps.map((s) => s.status)).toEqual([
+      "skipped",
+      "skipped",
+      "skipped",
+      "skipped",
+    ]);
     expect(provision).not.toHaveBeenCalled();
+    expect(npmCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates an NPM proxy host", async () => {
+    const npm = proxyReq();
+    const res = await runDeployment({ ...EMPTY, npm });
+    expect(npmCreate).toHaveBeenCalledWith(npm);
+    const step = res.steps.find((s) => s.key === "npm");
+    expect(step?.status).toBe("success");
+    expect(step?.detail).toContain("app.example.com");
   });
 
   it("provisions a database, deriving names and surfacing the connection string", async () => {
