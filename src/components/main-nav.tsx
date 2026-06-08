@@ -18,16 +18,18 @@ const GROUP_ORDER: ModuleGroup[] = ["core", "infrastructure", "platform"];
 
 function Brand() {
   return (
-    <div className="flex flex-col items-start gap-2.5 border-b px-5 py-5">
+    <div className="flex flex-col items-start gap-3 border-b border-border px-5 py-5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/aspyrelabs-logo.svg"
         alt="Aspyrelabs"
-        className="w-full max-w-[200px]"
+        className="w-full max-w-[190px] dark:brightness-0 dark:invert"
       />
-      <div className="flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d]" />
-        <span className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text text-[13px] font-semibold uppercase tracking-[0.18em] text-transparent">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-4 w-4 place-items-center border border-signal shadow-[0_0_12px_-2px_hsl(var(--signal))]">
+          <span className="cr-corepulse h-1.5 w-1.5 bg-signal" />
+        </span>
+        <span className="font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-signal">
           {BRAND.shortName}
         </span>
       </div>
@@ -49,7 +51,7 @@ export function MainNav() {
           if (modules.length === 0) return null;
           return (
             <div key={group} className="space-y-1">
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <p className="px-3 pb-1.5 font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-muted-foreground/60">
                 {GROUP_LABELS[group]}
               </p>
               {modules.map((m) => {
@@ -58,13 +60,13 @@ export function MainNav() {
                   return (
                     <div
                       key={m.id}
-                      className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground/50"
+                      className="flex items-center justify-between gap-3 rounded-sm px-3 py-2 text-sm font-medium text-muted-foreground/50"
                     >
                       <span className="flex items-center gap-3">
                         <Icon className="h-4 w-4" />
                         {m.name}
                       </span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide">
+                      <span className="rounded-sm border border-border px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.16em]">
                         Soon
                       </span>
                     </div>
@@ -80,10 +82,10 @@ export function MainNav() {
                           key={item.href}
                           href={item.href}
                           className={cn(
-                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                            "flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
                             active
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                              ? "border-l-2 border-signal bg-signal/10 text-foreground [&_svg]:text-signal"
+                              : "border-l-2 border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                           )}
                         >
                           <Icon className="h-4 w-4" />
@@ -103,10 +105,10 @@ export function MainNav() {
           <Link
             href="/settings"
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
               isActive("/settings")
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                ? "border-l-2 border-signal bg-signal/10 text-foreground [&_svg]:text-signal"
+                : "border-l-2 border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
             <Settings className="h-4 w-4" />
@@ -114,7 +116,7 @@ export function MainNav() {
           </Link>
         </div>
       </nav>
-      <div className="border-t p-4 text-[11px] text-muted-foreground">
+      <div className="border-t border-border p-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
         {BRAND.appName} v{BRAND.version}
       </div>
     </aside>
@@ -141,7 +143,7 @@ export function MobileNav() {
             className={cn(
               "flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium",
               active
-                ? "bg-primary text-primary-foreground"
+                ? "border-l-2 border-signal bg-signal/10 text-foreground [&_svg]:text-signal"
                 : "text-muted-foreground",
             )}
           >

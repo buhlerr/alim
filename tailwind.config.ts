@@ -14,12 +14,26 @@ const config: Config = {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        signal: "hsl(var(--signal))",
+        ok: "hsl(var(--ok))",
+        warn: "hsl(var(--warn))",
+        danger: "hsl(var(--danger))",
+        env: {
+          prod: "hsl(var(--env-prod))",
+          staging: "hsl(var(--env-staging))",
+          dev: "hsl(var(--env-dev))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

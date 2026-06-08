@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASPYRE // INFRA CONTROL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #0a0b0d;
+    --bg-grad:   #0d0f12;
+    --panel:     #111419;
+    --panel-2:   #15191f;
+    --panel-hi:  #1b2027;
+    --line:      #23282f;
+    --line-2:    #2e343d;
+    --text:      #e8eae4;
+    --muted:     #828b96;
+    --muted-2:   #5b636d;
+    --accent:    #c8ff3d;   /* acid-lime signal */
+    --accent-dim:#7e9c2a;
+    --prod:      #ff7a4d;   /* production = warm signal */
+    --stg:       #ffd24d;   /* staging  = amber */
+    --dev:       #4dd6ff;   /* dev      = cyan */
+    --ok:        #6ee787;
+    --danger:    #ff5d5d;
+    --glow:      0 0 0 1px var(--line), 0 0 24px -8px rgba(200,255,61,.18);
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --disp: "Chakra Petch", sans-serif;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(200,255,61,.05), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(77,214,255,.045), transparent 55%),
+      linear-gradient(180deg, var(--bg-grad), var(--bg));
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* fine engineering grid + grain overlays */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 40%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    opacity: .03; pointer-events: none; z-index: 0; mix-blend-mode: overlay;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 0 28px 96px; }
+
+  /* ───────────────── command bar ───────────────── */
+  .cmdbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 22px;
+    padding: 14px 28px;
+    margin: 0 -28px 0;
+    background: rgba(10,11,13,.72);
+    backdrop-filter: blur(14px) saturate(120%);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo {
+    width: 30px; height: 30px; position: relative;
+    border: 1.5px solid var(--accent);
+    display: grid; place-items: center;
+    box-shadow: 0 0 18px -4px var(--accent);
+  }
+  .brand .logo::before {
+    content: ""; width: 9px; height: 9px; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: corepulse 2.6s ease-in-out infinite;
+  }
+  @keyframes corepulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(.55);opacity:.55} }
+  .brand .name { font-family: var(--disp); font-weight: 700; letter-spacing: .14em; font-size: 15px; }
+  .brand .name b { color: var(--accent); }
+  .brand .sub { font-family: var(--mono); font-size: 9.5px; color: var(--muted-2); letter-spacing: .26em; }
+
+  .cmdbar .spacer { flex: 1; }
+  .telemetry { display: flex; align-items: center; gap: 22px; font-family: var(--mono); font-size: 11px; }
+  .tm { display: flex; flex-direction: column; gap: 2px; }
+  .tm .k { color: var(--muted-2); font-size: 8.5px; letter-spacing: .22em; }
+  .tm .v { color: var(--text); letter-spacing: .04em; }
+  .tm .v.lime { color: var(--accent); }
+
+  .syspill {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+    padding: 7px 12px; border: 1px solid var(--line-2);
+    background: linear-gradient(var(--panel), var(--panel-2));
+    color: var(--ok);
+  }
+  .syspill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: blink 1.8s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .avatar {
+    width: 32px; height: 32px; border: 1px solid var(--line-2);
+    background: var(--panel-hi); display: grid; place-items: center;
+    font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .04em;
+  }
+
+  /* ───────────────── hero ───────────────── */
+  .hero {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 32px; padding: 46px 0 30px; border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .34em;
+    color: var(--accent-dim); margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--accent-dim); }
+  .hero h1 {
+    font-family: var(--disp); font-weight: 700; line-height: .94;
+    font-size: clamp(38px, 6vw, 72px); letter-spacing: -.01em;
+    text-transform: uppercase;
+  }
+  .hero h1 .thin { font-weight: 400; color: var(--muted); display: block; font-size: .58em; letter-spacing: .02em; margin-top: 8px; }
+  .hero p { color: var(--muted); max-width: 460px; margin-top: 18px; font-size: 14.5px; line-height: 1.6; }
+
+  .cta {
+    font-family: var(--disp); font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    font-size: 14px; color: var(--bg); background: var(--accent);
+    border: none; padding: 16px 26px; cursor: pointer; position: relative;
+    display: inline-flex; align-items: center; gap: 12px;
+    clip-path: polygon(0 0, 100% 0, 100% 70%, calc(100% - 14px) 100%, 0 100%);
+    transition: transform .15s ease, box-shadow .25s ease, background .2s;
+    box-shadow: 0 0 0 1px var(--accent), 0 14px 40px -14px var(--accent);
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--accent), 0 20px 50px -12px var(--accent); }
+  .cta:active { transform: translateY(0); }
+  .cta svg { width: 18px; height: 18px; }
+
+  /* section headers */
+  .sec { margin-top: 52px; }
+  .sec-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+  }
+  .sec-head .idx { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .1em; }
+  .sec-head h2 {
+    font-family: var(--disp); font-weight: 600; text-transform: uppercase;
+    letter-spacing: .18em; font-size: 14px; color: var(--text);
+  }
+  .sec-head .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+  .sec-head .meta { font-family: var(--mono); font-size: 10px; color: var(--muted-2); letter-spacing: .12em; }
+
+  /* ───────────────── modules ───────────────── */
+  .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px){ .modules { grid-template-columns: repeat(2,1fr);} }
+  @media (max-width: 600px){ .modules { grid-template-columns: 1fr;} }
+
+  .mod {
+    position: relative; padding: 22px; background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line); cursor: pointer; overflow: hidden;
+    transition: border-color .25s, transform .25s, background .25s;
+  }
+  .mod::before { /* corner brackets */
+    content: ""; position: absolute; top: 10px; right: 10px; width: 14px; height: 14px;
+    border-top: 1.5px solid var(--line-2); border-right: 1.5px solid var(--line-2);
+    transition: border-color .25s, width .25s, height .25s;
+  }
+  .mod:not(.soon):hover { border-color: var(--accent); transform: translateY(-3px); background: linear-gradient(160deg, var(--panel-hi), var(--panel)); }
+  .mod:not(.soon):hover::before { border-color: var(--accent); width: 22px; height: 22px; }
+  .mod .ico { width: 38px; height: 38px; border: 1px solid var(--line-2); display: grid; place-items: center; color: var(--accent); margin-bottom: 18px; transition: background .25s; }
+  .mod:not(.soon):hover .ico { background: rgba(200,255,61,.08); }
+  .mod .ico svg { width: 19px; height: 19px; }
+  .mod h3 { font-family: var(--disp); font-weight: 600; font-size: 16px; letter-spacing: .03em; margin-bottom: 8px; }
+  .mod p { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+  .mod .tag {
+    position: absolute; top: 16px; right: 16px; font-family: var(--mono);
+    font-size: 8.5px; letter-spacing: .18em; padding: 3px 7px; color: var(--muted-2);
+    border: 1px solid var(--line-2);
+  }
+  .mod.soon { opacity: .5; cursor: not-allowed; }
+  .mod .go { margin-top: 16px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--accent-dim); display: flex; align-items: center; gap: 6px; opacity: 0; transform: translateX(-6px); transition: .25s; }
+  .mod:not(.soon):hover .go { opacity: 1; transform: translateX(0); }
+
+  /* ───────────────── telemetry stats ───────────────── */
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  @media (max-width: 1000px){ .stats { grid-template-columns: repeat(2,1fr);} }
+  .stat {
+    position: relative; padding: 20px; background: var(--panel);
+    border: 1px solid var(--line); overflow: hidden;
+  }
+  .stat .label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--muted-2); text-transform: uppercase; }
+  .stat .num { font-family: var(--disp); font-weight: 700; font-size: 42px; line-height: 1; margin: 14px 0 12px; letter-spacing: -.01em; }
+  .stat .bar { height: 4px; background: var(--panel-hi); position: relative; overflow: hidden; }
+  .stat .bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); width: 0; animation: fill 1.4s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes fill { to { width: var(--w, 60%);} }
+  .stat .foot { margin-top: 10px; font-family: var(--mono); font-size: 9.5px; color: var(--muted-2); letter-spacing: .06em; }
+  .stat.prod .num { color: var(--prod); } .stat.prod .bar i { background: var(--prod); }
+  .stat.stg .num  { color: var(--stg);  } .stat.stg .bar i  { background: var(--stg); }
+  .stat.dev .num  { color: var(--dev);  } .stat.dev .bar i  { background: var(--dev); }
+
+  /* ───────────────── integrations ───────────────── */
+  .integ { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+  @media (max-width: 800px){ .integ { grid-template-columns: repeat(2,1fr);} }
+  .ipill {
+    display: flex; align-items: center; gap: 13px; padding: 16px 18px;
+    background: var(--panel); border: 1px solid var(--line);
+    transition: border-color .25s;
+  }
+  .ipill:hover { border-color: var(--line-2); }
+  .ipill .badge { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line-2); font-family: var(--disp); font-weight: 700; font-size: 15px; }
+  .ipill .info { flex: 1; min-width: 0; }
+  .ipill .info .n { font-family: var(--disp); font-weight: 600; font-size: 13.5px; letter-spacing: .04em; }
+  .ipill .info .s { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; color: var(--muted-2); margin-top: 3px; }
+  .state { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; }
+  .state.on  { color: var(--ok); }
+  .state.off { color: var(--muted-2); }
+  .state.warn{ color: var(--stg); }
+  .state .d { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .state.on .d { animation: blink 1.6s infinite; }
+
+  /* ───────────────── two column ───────────────── */
+  .cols { display: grid; grid-template-columns: 1.05fr 1.95fr; gap: 14px; }
+  @media (max-width: 900px){ .cols { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); }
+  .panel .ph {
+    padding: 16px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel .ph .t { font-family: var(--disp); font-weight: 600; letter-spacing: .08em; font-size: 13px; text-transform: uppercase; }
+  .panel .ph .c { font-family: var(--mono); font-size: 9.5px; color: var(--muted-2); letter-spacing: .12em; }
+  .panel .pb { padding: 16px 20px; }
+
+  /* quick actions */
+  .qa { display: flex; flex-direction: column; gap: 8px; }
+  .qbtn {
+    display: flex; align-items: center; gap: 13px; padding: 14px 15px;
+    border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--text); font-family: var(--mono); font-size: 12px; letter-spacing: .04em;
+    cursor: pointer; transition: .2s; text-align: left;
+  }
+  .qbtn svg { width: 16px; height: 16px; color: var(--accent); }
+  .qbtn .arrow { margin-left: auto; color: var(--muted-2); transition: .2s; }
+  .qbtn:hover { border-color: var(--accent); background: var(--panel-hi); transform: translateX(3px); }
+  .qbtn:hover .arrow { color: var(--accent); transform: translateX(3px); }
+
+  /* server targets / nodes */
+  .node {
+    display: flex; align-items: center; gap: 14px; padding: 13px 14px;
+    border: 1px solid var(--line); background: var(--panel-2); margin-bottom: 8px;
+    transition: border-color .2s;
+  }
+  .node:hover { border-color: var(--line-2); }
+  .node:last-child { margin-bottom: 0; }
+  .envtag {
+    font-family: var(--mono); font-size: 9px; letter-spacing: .14em; padding: 4px 8px;
+    text-transform: uppercase; min-width: 78px; text-align: center; border: 1px solid;
+  }
+  .envtag.prod { color: var(--prod); border-color: rgba(255,122,77,.4); background: rgba(255,122,77,.08); }
+  .envtag.stg  { color: var(--stg);  border-color: rgba(255,210,77,.4); background: rgba(255,210,77,.08); }
+  .envtag.dev  { color: var(--dev);  border-color: rgba(77,214,255,.4); background: rgba(77,214,255,.08); }
+  .node .host { font-family: var(--mono); font-size: 12.5px; color: var(--text); flex: 1; letter-spacing: .02em; }
+  .node .conn { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; display: flex; align-items: center; gap: 7px; }
+  .node .conn.up { color: var(--ok); } .node .conn.down { color: var(--muted-2); }
+  .node .conn .d { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .node .conn.up .d { animation: blink 2s infinite; }
+
+  /* table */
+  .tbl { width: 100%; border-collapse: collapse; }
+  .tbl th {
+    text-align: left; font-family: var(--mono); font-size: 9px; letter-spacing: .18em;
+    color: var(--muted-2); text-transform: uppercase; padding: 0 14px 12px; font-weight: 500;
+    border-bottom: 1px solid var(--line);
+  }
+  .tbl td { padding: 13px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl tr:hover td { background: var(--panel-2); }
+  .tbl .app { font-family: var(--disp); font-weight: 600; letter-spacing: .02em; }
+  .tbl .mono { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .tbl .when { font-family: var(--mono); font-size: 10.5px; color: var(--muted-2); }
+
+  /* activity log */
+  .log { font-family: var(--mono); font-size: 12px; }
+  .logrow {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px dashed var(--line); position: relative;
+  }
+  .logrow:last-child { border-bottom: none; }
+  .logrow .glyph { width: 16px; text-align: center; flex-shrink: 0; }
+  .logrow.ok  .glyph { color: var(--ok); }
+  .logrow.err .glyph { color: var(--danger); }
+  .logrow .act { color: var(--accent); letter-spacing: .04em; flex-shrink: 0; }
+  .logrow .msg { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .logrow .ts { color: var(--muted-2); font-size: 10px; flex-shrink: 0; }
+
+  .viewall { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--accent-dim); text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+  .viewall:hover { color: var(--accent); }
+
+  /* entrance animation */
+  [data-rise] { opacity: 0; transform: translateY(16px); animation: rise .7s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0);} }
+
+  footer {
+    margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 10px; color: var(--muted-2); letter-spacing: .12em;
+    flex-wrap: wrap; gap: 12px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ───── command bar ───── -->
+<div class="cmdbar">
+  <div class="brand">
+    <div class="logo"></div>
+    <div>
+      <div class="name">ASPYRE<b>//</b>INFRA</div>
+      <div class="sub">CONTROL SURFACE v2.0</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="telemetry">
+    <div class="tm"><span class="k">REGION</span><span class="v">eu-central-1</span></div>
+    <div class="tm"><span class="k">UPTIME</span><span class="v lime">99.98%</span></div>
+    <div class="tm"><span class="k">SYS&nbsp;TIME</span><span class="v" id="clock">--:--:--</span></div>
+  </div>
+  <div class="syspill"><span class="dot"></span> ALL SYSTEMS NOMINAL</div>
+  <div class="avatar">AE</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ───── hero ───── -->
+  <section class="hero">
+    <div data-rise style="animation-delay:.05s">
+      <div class="eyebrow">INFRASTRUCTURE ADMINISTRATION</div>
+      <h1>Infra<br>Control<span class="thin">Provision · Operate · Observe</span></h1>
+      <p>Centralized command for database provisioning, SQL operations, and Coolify application management across all Aspyre Labs environments.</p>
+    </div>
+    <button class="cta" data-rise style="animation-delay:.18s">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+      Provision Database
+    </button>
+  </section>
+
+  <!-- ───── modules ───── -->
+  <section class="sec" data-rise style="animation-delay:.12s">
+    <div class="sec-head">
+      <span class="idx">01</span><h2>Modules</h2><span class="rule"></span>
+      <span class="meta">4 ONLINE · 2 PENDING</span>
+    </div>
+    <div class="modules">
+      <div class="mod">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
+        <h3>Databases</h3>
+        <p>Provision and manage PostgreSQL databases with environment-aware credential issuance.</p>
+        <div class="go">ENTER MODULE →</div>
+      </div>
+      <div class="mod">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></div>
+        <h3>SQL Console</h3>
+        <p>Run ad-hoc queries against provisioned databases with formatting and safety guards.</p>
+        <div class="go">ENTER MODULE →</div>
+      </div>
+      <div class="mod">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5A4.5 4.5 0 018 9a6 6 0 0111.5 2A3.5 3.5 0 0119 17.5z"/></svg></div>
+        <h3>Cloudflare</h3>
+        <p>Manage zones, DNS records, TLS modes, and Cloudflare Tunnels across all domains.</p>
+        <div class="go">ENTER MODULE →</div>
+      </div>
+      <div class="mod">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+        <h3>Coolify</h3>
+        <p>Deploy and operate applications, view service health and trigger redeployments.</p>
+        <div class="go">ENTER MODULE →</div>
+      </div>
+      <div class="mod soon">
+        <span class="tag">SOON</span>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
+        <h3>Observability</h3>
+        <p>Unified metrics, logs and alerting across the provisioned fleet.</p>
+      </div>
+      <div class="mod soon">
+        <span class="tag">SOON</span>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8"/></svg></div>
+        <h3>Secrets Vault</h3>
+        <p>Centralized rotation and distribution of service credentials.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── telemetry stats ───── -->
+  <section class="sec" data-rise style="animation-delay:.18s">
+    <div class="sec-head">
+      <span class="idx">02</span><h2>Fleet Telemetry</h2><span class="rule"></span>
+      <span class="meta">LIVE</span>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="label">Total Databases</div>
+        <div class="num">47</div>
+        <div class="bar"><i style="--w:100%"></i></div>
+        <div class="foot">↑ 6 THIS WEEK</div>
+      </div>
+      <div class="stat prod">
+        <div class="label">Production</div>
+        <div class="num">18</div>
+        <div class="bar"><i style="--w:78%"></i></div>
+        <div class="foot">CRITICAL TIER</div>
+      </div>
+      <div class="stat stg">
+        <div class="label">Staging</div>
+        <div class="num">14</div>
+        <div class="bar"><i style="--w:60%"></i></div>
+        <div class="foot">PRE-RELEASE</div>
+      </div>
+      <div class="stat dev">
+        <div class="label">Development</div>
+        <div class="num">15</div>
+        <div class="bar"><i style="--w:64%"></i></div>
+        <div class="foot">EPHEMERAL</div>
+      </div>
+      <div class="stat">
+        <div class="label">Configured Servers</div>
+        <div class="num">3<span style="color:var(--muted-2);font-size:.5em">/3</span></div>
+        <div class="bar"><i style="--w:100%"></i></div>
+        <div class="foot">FULL COVERAGE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── integrations ───── -->
+  <section class="sec" data-rise style="animation-delay:.24s">
+    <div class="sec-head">
+      <span class="idx">03</span><h2>Integrations</h2><span class="rule"></span>
+      <span class="meta">3 CONNECTED · 1 ATTENTION</span>
+    </div>
+    <div class="integ">
+      <div class="ipill">
+        <div class="badge" style="color:var(--prod)">CF</div>
+        <div class="info"><div class="n">Cloudflare</div><div class="s">12 ZONES</div></div>
+        <div class="state on"><span class="d"></span>LINKED</div>
+      </div>
+      <div class="ipill">
+        <div class="badge" style="color:var(--dev)">CO</div>
+        <div class="info"><div class="n">Coolify</div><div class="s">8 SERVICES</div></div>
+        <div class="state on"><span class="d"></span>LINKED</div>
+      </div>
+      <div class="ipill">
+        <div class="badge" style="color:var(--accent)">NP</div>
+        <div class="info"><div class="n">NPM Registry</div><div class="s">PUBLISH OK</div></div>
+        <div class="state on"><span class="d"></span>LINKED</div>
+      </div>
+      <div class="ipill">
+        <div class="badge" style="color:var(--stg)">GH</div>
+        <div class="info"><div class="n">GitHub</div><div class="s">TOKEN EXPIRING</div></div>
+        <div class="state warn"><span class="d"></span>RENEW</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── two column: actions + nodes ───── -->
+  <section class="sec" data-rise style="animation-delay:.30s">
+    <div class="sec-head">
+      <span class="idx">04</span><h2>Operations</h2><span class="rule"></span>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <div class="ph"><span class="t">Quick Actions</span><span class="c">CMD</span></div>
+        <div class="pb">
+          <div class="qa">
+            <button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Create single database<span class="arrow">→</span></button>
+            <button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Create full environment set<span class="arrow">→</span></button>
+            <button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8M3 12h6"/></svg>Browse the registry<span class="arrow">→</span></button>
+            <button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17.5A4.5 4.5 0 018 9a6 6 0 0111.5 2A3.5 3.5 0 0119 17.5z"/></svg>Configure Cloudflare tunnel<span class="arrow">→</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="t">Server Targets</span><span class="c">3 NODES · 3 ONLINE</span></div>
+        <div class="pb">
+          <div class="node">
+            <span class="envtag prod">PROD</span>
+            <span class="host">db-prod-01.aspyre.internal:5432</span>
+            <span class="conn up"><span class="d"></span>ONLINE</span>
+          </div>
+          <div class="node">
+            <span class="envtag stg">STAGING</span>
+            <span class="host">db-staging-01.aspyre.internal:5432</span>
+            <span class="conn up"><span class="d"></span>ONLINE</span>
+          </div>
+          <div class="node">
+            <span class="envtag dev">DEV</span>
+            <span class="host">db-dev-01.aspyre.internal:5432</span>
+            <span class="conn up"><span class="d"></span>ONLINE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── recently provisioned ───── -->
+  <section class="sec" data-rise style="animation-delay:.36s">
+    <div class="sec-head">
+      <span class="idx">05</span><h2>Recently Provisioned</h2><span class="rule"></span>
+      <span class="meta">LAST 8</span>
+    </div>
+    <div class="panel">
+      <div class="pb" style="padding-top:20px">
+        <table class="tbl">
+          <thead><tr><th>Application</th><th>Environment</th><th>Database</th><th>Host</th><th>Created</th></tr></thead>
+          <tbody>
+            <tr><td class="app">billing-api</td><td><span class="envtag prod">PROD</span></td><td class="mono">billing_prod</td><td class="mono">db-prod-01</td><td class="when">2026-06-08</td></tr>
+            <tr><td class="app">notify-worker</td><td><span class="envtag stg">STAGING</span></td><td class="mono">notify_stg</td><td class="mono">db-staging-01</td><td class="when">2026-06-07</td></tr>
+            <tr><td class="app">portal-web</td><td><span class="envtag dev">DEV</span></td><td class="mono">portal_dev</td><td class="mono">db-dev-01</td><td class="when">2026-06-07</td></tr>
+            <tr><td class="app">auth-service</td><td><span class="envtag prod">PROD</span></td><td class="mono">auth_prod</td><td class="mono">db-prod-01</td><td class="when">2026-06-06</td></tr>
+            <tr><td class="app">analytics-etl</td><td><span class="envtag stg">STAGING</span></td><td class="mono">analytics_stg</td><td class="mono">db-staging-01</td><td class="when">2026-06-05</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── activity log ───── -->
+  <section class="sec" data-rise style="animation-delay:.42s">
+    <div class="sec-head">
+      <span class="idx">06</span><h2>Activity Stream</h2><span class="rule"></span>
+      <a href="#" class="viewall">VIEW FULL LOG →</a>
+    </div>
+    <div class="panel">
+      <div class="pb">
+        <div class="log">
+          <div class="logrow ok"><span class="glyph">✓</span><span class="act">DB.CREATE</span><span class="msg">Provisioned billing_prod on db-prod-01.aspyre.internal</span><span class="ts">12:04:51</span></div>
+          <div class="logrow ok"><span class="glyph">✓</span><span class="act">CF.TUNNEL</span><span class="msg">Routed app.aspyrelabs.com → tunnel "edge-01"</span><span class="ts">11:48:22</span></div>
+          <div class="logrow err"><span class="glyph">✕</span><span class="act">CF.AUTH</span><span class="msg">Cloudflare API token rejected — INVALID_TOKEN (401)</span><span class="ts">11:31:07</span></div>
+          <div class="logrow ok"><span class="glyph">✓</span><span class="act">DB.GRANT</span><span class="msg">Issued read-write role for notify-worker (staging)</span><span class="ts">10:59:40</span></div>
+          <div class="logrow ok"><span class="glyph">✓</span><span class="act">COOLIFY</span><span class="msg">Redeployed portal-web → 3 replicas healthy</span><span class="ts">10:22:13</span></div>
+          <div class="logrow ok"><span class="glyph">✓</span><span class="act">DB.CREATE</span><span class="msg">Provisioned auth_prod on db-prod-01.aspyre.internal</span><span class="ts">09:47:55</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>ASPYRE LABS · INFRASTRUCTURE CONTROL SURFACE</span>
+    <span>© 2026 · BUILD 2.0.0 · <span style="color:var(--accent-dim)">SECURE SESSION</span></span>
+  </footer>
+
+</div>
+
+<script>
+  // live system clock — control-room feel
+  const clock = document.getElementById('clock');
+  function tick(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    clock.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // subtle parallax on the grid as a control-surface flourish
+  document.addEventListener('mousemove', e => {
+    const x = (e.clientX / window.innerWidth - .5) * 6;
+    const y = (e.clientY / window.innerHeight - .5) * 6;
+    document.body.style.setProperty('--px', x + 'px');
+  }, { passive: true });
+</script>
+</body>
+</html>
