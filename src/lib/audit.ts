@@ -41,6 +41,14 @@ export const AUDIT_ACTIONS = {
   NPM_DEAD_HOST_TOGGLE: "npm.dead_host.toggle",
   NPM_CERTIFICATE_REQUEST: "npm.certificate.request",
   NPM_CERTIFICATE_DELETE: "npm.certificate.delete",
+  CF_CONFIG_SAVE: "cloudflare.config.save",
+  CF_TUNNEL_CREATE: "cloudflare.tunnel.create",
+  CF_TUNNEL_DELETE: "cloudflare.tunnel.delete",
+  CF_TUNNEL_ROUTE_UPDATE: "cloudflare.tunnel.route_update",
+  CF_DNS_CREATE: "cloudflare.dns.create",
+  CF_DNS_UPDATE: "cloudflare.dns.update",
+  CF_DNS_DELETE: "cloudflare.dns.delete",
+  CF_TLS_UPDATE: "cloudflare.tls.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -56,6 +64,9 @@ export const AUDIT_TARGET_TYPES = {
   NPM_STREAM: "npm_stream",
   NPM_DEAD_HOST: "npm_dead_host",
   NPM_CERTIFICATE: "npm_certificate",
+  CF_TUNNEL: "cf_tunnel",
+  CF_DNS_RECORD: "cf_dns_record",
+  CF_ZONE: "cf_zone",
 } as const;
 
 export type AuditTargetType =
@@ -98,6 +109,14 @@ export function actionLabel(action: string): string {
     [AUDIT_ACTIONS.NPM_DEAD_HOST_TOGGLE]: "Toggled 404 host",
     [AUDIT_ACTIONS.NPM_CERTIFICATE_REQUEST]: "Requested certificate",
     [AUDIT_ACTIONS.NPM_CERTIFICATE_DELETE]: "Deleted certificate",
+    [AUDIT_ACTIONS.CF_CONFIG_SAVE]: "Saved Cloudflare config",
+    [AUDIT_ACTIONS.CF_TUNNEL_CREATE]: "Created tunnel",
+    [AUDIT_ACTIONS.CF_TUNNEL_DELETE]: "Deleted tunnel",
+    [AUDIT_ACTIONS.CF_TUNNEL_ROUTE_UPDATE]: "Updated tunnel routes",
+    [AUDIT_ACTIONS.CF_DNS_CREATE]: "Created DNS record",
+    [AUDIT_ACTIONS.CF_DNS_UPDATE]: "Updated DNS record",
+    [AUDIT_ACTIONS.CF_DNS_DELETE]: "Deleted DNS record",
+    [AUDIT_ACTIONS.CF_TLS_UPDATE]: "Updated TLS settings",
   };
   return labels[action] ?? action;
 }

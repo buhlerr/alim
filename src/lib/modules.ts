@@ -93,9 +93,9 @@ export const MODULES: AppModule[] = [
     description: "Manage Cloudflare tunnel routes and TLS settings.",
     icon: Globe,
     href: "/cloudflare",
-    status: "coming-soon",
+    status: "available",
     group: "infrastructure",
-    nav: [],
+    nav: [{ href: "/cloudflare", label: "Cloudflare", icon: Globe }],
   },
   {
     id: "deployment",
