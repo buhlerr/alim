@@ -6,18 +6,26 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-function useClock() {
-  const [time, setTime] = React.useState<string | null>(null);
+function useNow() {
+  const [now, setNow] = React.useState<Date | null>(null);
   React.useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      setTime(`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);
-    };
+    const tick = () => setNow(new Date());
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-  return time;
+  return now;
+}
+
+function formatTime(d: Date, hour12: boolean): string {
+  const m = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  if (hour12) {
+    const ampm = d.getHours() >= 12 ? "PM" : "AM";
+    const h = d.getHours() % 12 || 12;
+    return `${pad(h)}:${m}:${s} ${ampm}`;
+  }
+  return `${pad(d.getHours())}:${m}:${s}`;
 }
 
 type Health = { status: "ok" | "degraded" | "unknown"; uptimeSeconds: number };
@@ -86,12 +94,13 @@ function formatUptime(total: number): string {
 
 /**
  * Global command bar shown above page content on desktop. Carries the live
- * system clock, the real server uptime + database-backed status pill (both from
- * /api/health), the day/night toggle, and the operator identity.
+ * system clock (click to toggle 12h/24h), the real server uptime + a
+ * database-backed status pill (both from /api/health), and the day/night toggle.
  */
-export function AppBar({ operator }: { operator: string }) {
-  const time = useClock();
+export function AppBar() {
+  const now = useNow();
   const health = useHealth();
+  const [hour12, setHour12] = React.useState(true); // default to AM/PM
 
   const isOk = health?.status === "ok";
   const isDown = health?.status === "degraded";
@@ -107,8 +116,6 @@ export function AppBar({ operator }: { operator: string }) {
       ? "bg-ok shadow-[0_0_8px_hsl(var(--ok))]"
       : "bg-danger shadow-[0_0_8px_hsl(var(--danger))]";
 
-  const initials = operatorInitials(operator);
-
   return (
     <header className="sticky top-0 z-40 hidden items-center gap-6 border-b border-border bg-background/70 px-6 py-3 backdrop-blur-md backdrop-saturate-150 md:flex">
       <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -122,7 +129,19 @@ export function AppBar({ operator }: { operator: string }) {
           v={health ? formatUptime(health.uptimeSeconds) : "--:--:--"}
           accent
         />
-        <Telemetry k="Sys&nbsp;Time" v={time ?? "--:--:--"} mono />
+        <button
+          type="button"
+          onClick={() => setHour12((v) => !v)}
+          title={`Switch to ${hour12 ? "24-hour" : "12-hour"} time`}
+          className="group flex flex-col items-start gap-0.5 text-left transition-colors"
+        >
+          <span className="text-[8.5px] uppercase tracking-[0.22em] text-muted-foreground/70 group-hover:text-signal">
+            Sys&nbsp;Time
+          </span>
+          <span className="tabular-nums text-foreground group-hover:text-signal">
+            {now ? formatTime(now, hour12) : "--:--:--"}
+          </span>
+        </button>
       </div>
 
       <div
@@ -133,35 +152,18 @@ export function AppBar({ operator }: { operator: string }) {
       </div>
 
       <ThemeToggle />
-
-      <div
-        title={`Operator: ${operator}`}
-        className="grid h-8 w-8 place-items-center border border-border bg-secondary/50 font-mono text-[11px] text-signal"
-      >
-        {initials}
-      </div>
     </header>
   );
-}
-
-/** First letters of the operator id's words (e.g. "internal-admin" → "IA"). */
-function operatorInitials(operator: string): string {
-  const parts = operator.split(/[^a-zA-Z0-9]+/).filter(Boolean);
-  if (parts.length === 0) return "··";
-  const letters = (parts[0][0] + (parts[1]?.[0] ?? parts[0][1] ?? "")).toUpperCase();
-  return letters || "··";
 }
 
 function Telemetry({
   k,
   v,
   accent,
-  mono,
 }: {
   k: string;
   v: string;
   accent?: boolean;
-  mono?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -169,15 +171,7 @@ function Telemetry({
         className="text-[8.5px] uppercase tracking-[0.22em] text-muted-foreground/70"
         dangerouslySetInnerHTML={{ __html: k }}
       />
-      <span
-        className={
-          accent
-            ? "tabular-nums text-signal"
-            : mono
-              ? "tabular-nums text-foreground"
-              : "text-foreground"
-        }
-      >
+      <span className={accent ? "tabular-nums text-signal" : "tabular-nums text-foreground"}>
         {v}
       </span>
     </div>
