@@ -54,6 +54,24 @@ describe("deploymentPlanSchema", () => {
     ).toBe(true);
   });
 
+  it("validates the npm proxy-host fields only when enabled", () => {
+    expect(
+      deploymentPlanSchema.safeParse({ applicationName: "app", npmEnabled: true, npm: {} }).success,
+    ).toBe(false);
+    expect(
+      deploymentPlanSchema.safeParse({
+        applicationName: "app",
+        npmEnabled: true,
+        npm: {
+          domain_names: "app.example.com",
+          forward_scheme: "http",
+          forward_host: "10.0.0.5",
+          forward_port: 3000,
+        },
+      }).success,
+    ).toBe(true);
+  });
+
   it("validates the dns fields + zone only when enabled", () => {
     expect(
       deploymentPlanSchema.safeParse({ applicationName: "app", dnsEnabled: true, dns }).success,

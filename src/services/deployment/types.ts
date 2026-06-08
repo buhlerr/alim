@@ -1,12 +1,15 @@
+import type { ProxyHostRequest } from "@/services/npm/types";
+
 /**
- * Deployment orchestrator types. A deployment runs up to three optional steps
- * (database, Coolify app, Cloudflare DNS) and reports the outcome of each.
+ * Deployment orchestrator types. A deployment runs up to four optional steps
+ * (database, Coolify app, NPM proxy host, Cloudflare DNS) and reports the
+ * outcome of each.
  */
 
 export type StepStatus = "success" | "failed" | "skipped";
 
 export interface DeploymentStepResult {
-  key: "database" | "coolify" | "dns";
+  key: "database" | "coolify" | "npm" | "dns";
   label: string;
   status: StepStatus;
   /** Human-readable success detail (e.g. an app UUID or DNS name). */
@@ -50,6 +53,8 @@ export interface DeploymentPlan {
   database: { environment: string } | null;
   /** Create + deploy a Coolify app, or null to skip. */
   coolify: DeploymentCoolifyStep | null;
+  /** Create an NPM proxy host, or null to skip. */
+  npm: ProxyHostRequest | null;
   /** Create a Cloudflare DNS record, or null to skip. */
   dns: DeploymentDnsStep | null;
 }

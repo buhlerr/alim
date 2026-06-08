@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { deploymentPlanSchema } from "@/lib/deployment-validation";
 import { createApplicationSchema } from "@/lib/coolify-validation";
 import { dnsRecordSchema } from "@/lib/cloudflare-validation";
+import { proxyHostSchema, parseDomains } from "@/lib/npm-validation";
+import { isNpmConfigured } from "@/lib/npm-config";
 import { runDeployment } from "@/services/deployment/orchestrator";
 import type { DeploymentPlan, DeploymentResult } from "@/services/deployment/types";
 import { environmentsService } from "@/services/environments";
@@ -28,6 +30,7 @@ export interface ActionResult<T = undefined> {
 export interface DeploymentOptions {
   environments: EnvironmentSummary[];
   coolify: { configured: boolean; projects: CoolifyProject[]; servers: CoolifyServer[] };
+  npm: { configured: boolean };
   cloudflare: { configured: boolean; zones: CfZone[] };
 }
 
@@ -62,6 +65,7 @@ export async function getDeploymentOptionsAction(): Promise<DeploymentOptions> {
   return {
     environments,
     coolify: { configured: coolifyConfigured, projects, servers },
+    npm: { configured: await isNpmConfigured() },
     cloudflare: { configured: cloudflareConfigured, zones },
   };
 }
@@ -95,6 +99,27 @@ export async function runDeploymentAction(
     };
   }
 
+  let npm: DeploymentPlan["npm"] = null;
+  if (v.npmEnabled) {
+    const n = proxyHostSchema.parse(v.npm);
+    const hasCert = n.certificate_id > 0;
+    npm = {
+      domain_names: parseDomains(n.domain_names),
+      forward_scheme: n.forward_scheme,
+      forward_host: n.forward_host.trim(),
+      forward_port: n.forward_port,
+      certificate_id: n.certificate_id,
+      ssl_forced: hasCert && n.ssl_forced,
+      http2_support: hasCert && n.http2_support,
+      hsts_enabled: hasCert && n.hsts_enabled,
+      block_exploits: n.block_exploits,
+      caching_enabled: n.caching_enabled,
+      allow_websocket_upgrade: n.allow_websocket_upgrade,
+      access_list_id: n.access_list_id,
+      advanced_config: n.advanced_config || "",
+    };
+  }
+
   let dns: DeploymentPlan["dns"] = null;
   if (v.dnsEnabled) {
     const d = dnsRecordSchema.parse(v.dns);
@@ -111,6 +136,7 @@ export async function runDeploymentAction(
     applicationName: v.applicationName,
     database: v.databaseEnabled ? { environment: v.databaseEnvironment } : null,
     coolify,
+    npm,
     dns,
   };
 

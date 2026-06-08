@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createApplicationSchema } from "./coolify-validation";
 import { dnsRecordSchema } from "./cloudflare-validation";
+import { proxyHostSchema } from "./npm-validation";
 
 /**
  * Wizard form schema. Each step is gated by an `*Enabled` toggle; the step's
@@ -14,12 +15,14 @@ export const deploymentPlanSchema = z
     databaseEnvironment: z.string().optional().default(""),
     coolifyEnabled: z.boolean().default(false),
     coolify: z.unknown().optional(),
+    npmEnabled: z.boolean().default(false),
+    npm: z.unknown().optional(),
     dnsEnabled: z.boolean().default(false),
     dnsZoneId: z.string().optional().default(""),
     dns: z.unknown().optional(),
   })
   .superRefine((v, ctx) => {
-    if (!v.databaseEnabled && !v.coolifyEnabled && !v.dnsEnabled) {
+    if (!v.databaseEnabled && !v.coolifyEnabled && !v.npmEnabled && !v.dnsEnabled) {
       ctx.addIssue({
         code: "custom",
         path: ["applicationName"],
@@ -38,6 +41,13 @@ export const deploymentPlanSchema = z
         code: "custom",
         path: ["coolify"],
         message: "Complete the Coolify application fields",
+      });
+    }
+    if (v.npmEnabled && !proxyHostSchema.safeParse(v.npm).success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["npm"],
+        message: "Complete the proxy host fields",
       });
     }
     if (v.dnsEnabled) {
