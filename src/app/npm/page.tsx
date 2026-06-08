@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { isNpmConfigured } from "@/lib/npm-config";
 import {
   getProxyHostsAction,
@@ -37,6 +39,20 @@ export default async function NpmPage() {
     );
   }
 
+  return (
+    <div>
+      <PageHeader
+        title="Proxy Hosts"
+        description="Manage Nginx Proxy Manager hosts, redirects, streams, and SSL."
+      />
+      <Suspense fallback={<ListSkeleton />}>
+        <NpmContent />
+      </Suspense>
+    </div>
+  );
+}
+
+async function NpmContent() {
   const [proxy, redir, streams, dead, options] = await Promise.all([
     getProxyHostsAction(),
     getRedirectionHostsAction(),
@@ -49,20 +65,14 @@ export default async function NpmPage() {
   const error = [proxy, redir, streams, dead, options].find((r) => !r.ok)?.error;
 
   return (
-    <div>
-      <PageHeader
-        title="Proxy Hosts"
-        description="Manage Nginx Proxy Manager hosts, redirects, streams, and SSL."
-      />
-      <NpmManager
-        proxyHosts={proxy.data ?? []}
-        redirectionHosts={redir.data ?? []}
-        streams={streams.data ?? []}
-        deadHosts={dead.data ?? []}
-        certificates={options.data?.certificates ?? []}
-        accessLists={options.data?.accessLists ?? []}
-        error={error}
-      />
-    </div>
+    <NpmManager
+      proxyHosts={proxy.data ?? []}
+      redirectionHosts={redir.data ?? []}
+      streams={streams.data ?? []}
+      deadHosts={dead.data ?? []}
+      certificates={options.data?.certificates ?? []}
+      accessLists={options.data?.accessLists ?? []}
+      error={error}
+    />
   );
 }

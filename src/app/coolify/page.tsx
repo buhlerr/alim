@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Cloud, PlusCircle, ExternalLink } from "lucide-react";
 
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { isCoolifyConfigured } from "@/lib/coolify-config";
 import { getCoolifyApplicationsAction } from "@/app/actions/coolify";
 
@@ -37,8 +39,6 @@ export default async function CoolifyPage() {
     );
   }
 
-  const res = await getCoolifyApplicationsAction();
-
   return (
     <div>
       <PageHeader
@@ -52,7 +52,18 @@ export default async function CoolifyPage() {
           </Button>
         }
       />
+      <Suspense fallback={<ListSkeleton rows={3} />}>
+        <CoolifyApps />
+      </Suspense>
+    </div>
+  );
+}
 
+async function CoolifyApps() {
+  const res = await getCoolifyApplicationsAction();
+
+  return (
+    <>
       {!res.ok ? (
         <Card className="border-destructive/40">
           <CardContent className="py-6 text-sm text-destructive">
@@ -98,6 +109,6 @@ export default async function CoolifyPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   );
 }
