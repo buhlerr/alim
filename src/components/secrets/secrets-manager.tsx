@@ -35,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ClientTime } from "@/components/ui/client-time";
 import { SecretForm, type SecretDraft } from "./secret-form";
 import {
   createSecretAction,
@@ -52,20 +53,6 @@ export interface SecretListItem {
   lastRevealedAt: string | null;
   /** ISO timestamp. */
   createdAt: string;
-}
-
-function relativeTime(iso: string | null): string {
-  if (!iso) return "Never";
-  const then = new Date(iso).getTime();
-  const diff = Date.now() - then;
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
 }
 
 export function SecretsManager({ secrets }: { secrets: SecretListItem[] }) {
@@ -242,7 +229,11 @@ function SecretRow({
         )}
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
-        {relativeTime(secret.lastRevealedAt)}
+        {secret.lastRevealedAt ? (
+          <ClientTime iso={secret.lastRevealedAt} relative />
+        ) : (
+          "Never"
+        )}
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-end gap-1">
