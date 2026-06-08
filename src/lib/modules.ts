@@ -113,9 +113,9 @@ export const MODULES: AppModule[] = [
     description: "Encrypted storage for API tokens and credentials.",
     icon: KeyRound,
     href: "/secrets",
-    status: "coming-soon",
+    status: "available",
     group: "platform",
-    nav: [],
+    nav: [{ href: "/secrets", label: "Secrets", icon: KeyRound }],
   },
   {
     id: "audit",
