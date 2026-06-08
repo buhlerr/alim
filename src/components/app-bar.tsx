@@ -104,7 +104,7 @@ export function AppBar() {
 
   const isOk = health?.status === "ok";
   const isDown = health?.status === "degraded";
-  const statusLabel = !health ? "Checking" : isOk ? "Nominal" : "Degraded";
+  const statusLabel = !health ? "Checking" : isOk ? "Normal" : "Degraded";
   const statusTone = !health
     ? "border-border text-muted-foreground"
     : isOk
