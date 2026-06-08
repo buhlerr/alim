@@ -1,4 +1,4 @@
-import { Cloud, Database, Layers, Network } from "lucide-react";
+import { Cloud, Database, Globe, Layers, Network } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { EnvironmentsSection } from "@/components/settings/environments-section";
@@ -16,8 +16,10 @@ import { getAllTargetInfo } from "@/lib/targets";
 import { PostgresTargetForm } from "@/components/settings/postgres-target-form";
 import { CoolifySettingsForm } from "@/components/settings/coolify-settings-form";
 import { NpmSettingsForm } from "@/components/settings/npm-settings-form";
+import { CloudflareSettingsForm } from "@/components/settings/cloudflare-settings-form";
 import { COOLIFY_SETTING_KEYS, isCoolifyConfigured } from "@/lib/coolify-config";
 import { NPM_SETTING_KEYS, isNpmConfigured } from "@/lib/npm-config";
+import { CLOUDFLARE_SETTING_KEYS, isCloudflareConfigured } from "@/lib/cloudflare-config";
 import { settingsService } from "@/services/settings";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,11 @@ export default async function SettingsPage() {
   const npmIdentity =
     (await settingsService.get(NPM_SETTING_KEYS.identity)) ??
     process.env.NPM_IDENTITY ??
+    "";
+  const cloudflareConfigured = await isCloudflareConfigured();
+  const cloudflareAccountId =
+    (await settingsService.get(CLOUDFLARE_SETTING_KEYS.accountId)) ??
+    process.env.CLOUDFLARE_ACCOUNT_ID ??
     "";
 
   return (
@@ -130,6 +137,34 @@ export default async function SettingsPage() {
               configured={npmConfigured}
               initialBaseUrl={npmBaseUrl}
               initialIdentity={npmIdentity}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <Globe className="h-4 w-4" /> Cloudflare
+        </h2>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">Cloudflare API connection</CardTitle>
+              {cloudflareConfigured ? (
+                <Badge variant="success">Configured</Badge>
+              ) : (
+                <Badge variant="outline">Not configured</Badge>
+              )}
+            </div>
+            <CardDescription>
+              A scoped API token stored encrypted (AES-256-GCM). The account ID is
+              required for tunnels. Requires ENCRYPTION_KEY.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CloudflareSettingsForm
+              configured={cloudflareConfigured}
+              initialAccountId={cloudflareAccountId}
             />
           </CardContent>
         </Card>
