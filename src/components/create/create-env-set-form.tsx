@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EnvironmentBadge } from "@/components/environment-badge";
 import {
   ProvisionResultPanel,
   type ProvisionResultItem,
@@ -99,28 +100,51 @@ export function CreateEnvSetForm({ environments }: { environments: EnvironmentSu
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            One click creates a database and user in every environment.
+            Provisions a database and user in every environment, named after the
+            app and suffixed per environment (Production gets no suffix).
           </p>
         )}
       </div>
 
-      {appName ? (
-        <div className="rounded-lg border bg-muted/40 p-4">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
-            Will create
-          </p>
-          <div className="space-y-1 font-mono text-xs">
-            {environments.map((env) => (
-              <div key={env.key} className="flex flex-wrap gap-x-2">
-                <span className="text-muted-foreground">{env.name}:</span>
-                <span>{deriveDatabaseName(appName, env.abbreviation)}</span>
-                <span className="text-muted-foreground">/</span>
-                <span>{deriveUsername(appName, env.abbreviation)}</span>
-              </div>
-            ))}
-          </div>
+      {/* Always-on preview of the exact database + user names per environment. */}
+      <div className="overflow-hidden rounded-sm border border-border bg-secondary/30">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            Will provision
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50">
+            {environments.length} environment{environments.length === 1 ? "" : "s"}
+          </span>
         </div>
-      ) : null}
+        <div className="divide-y divide-border">
+          {environments.map((env) => {
+            const stem = appName.trim() || "appname";
+            const dim = !appName.trim();
+            return (
+              <div
+                key={env.key}
+                className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[140px_1fr] sm:items-center"
+              >
+                <EnvironmentBadge environment={env} />
+                <div className={`space-y-1 font-mono text-xs ${dim ? "opacity-50" : ""}`}>
+                  <div className="text-foreground">
+                    <span className="mr-2 inline-block w-9 text-muted-foreground/50">
+                      db
+                    </span>
+                    {deriveDatabaseName(stem, env.abbreviation)}
+                  </div>
+                  <div className="text-muted-foreground">
+                    <span className="mr-2 inline-block w-9 text-muted-foreground/50">
+                      user
+                    </span>
+                    {deriveUsername(stem, env.abbreviation)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="space-y-1.5">
         <Label>Notes (optional)</Label>
