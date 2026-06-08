@@ -108,3 +108,22 @@ model Setting {
 
   @@map("settings")
 }
+
+/// User-managed encrypted vault for arbitrary credentials (API tokens,
+/// passwords, connection strings, SSH keys). Distinct from the app-internal
+/// `Setting` store: these are surfaced and managed in the Secrets module UI.
+/// The plaintext value is encrypted at rest (AES-256-GCM, `src/lib/crypto.ts`)
+/// and is only ever returned through the explicit reveal path.
+model Secret {
+  id             String    @id @default(cuid())
+  name           String    @unique
+  description    String?
+  category       String
+  encryptedValue String    @map("encrypted_value")
+  lastRevealedAt DateTime? @map("last_revealed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("secrets")
+}
