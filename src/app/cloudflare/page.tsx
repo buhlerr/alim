@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Callout } from "@/components/ui/callout";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { isCloudflareConfigured } from "@/lib/cloudflare-config";
 import { getTunnelsAction, getZonesAction } from "@/app/actions/cloudflare";
@@ -21,14 +21,12 @@ export default async function CloudflarePage() {
           title="Cloudflare"
           description="Manage tunnels, DNS records, and TLS settings."
         />
-        <Card className="border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-          <CardContent className="flex flex-col items-start gap-3 py-6 text-sm">
-            <p>Cloudflare is not connected yet.</p>
-            <Button asChild>
-              <Link href="/settings">Configure in Settings</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Callout tone="warn" title="Not connected">
+          <p>Cloudflare is not connected yet.</p>
+          <Button asChild>
+            <Link href="/settings">Configure in Settings</Link>
+          </Button>
+        </Callout>
       </div>
     );
   }

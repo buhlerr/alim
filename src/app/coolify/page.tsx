@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Callout } from "@/components/ui/callout";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import { isCoolifyConfigured } from "@/lib/coolify-config";
 import { getCoolifyApplicationsAction } from "@/app/actions/coolify";
@@ -27,14 +28,12 @@ export default async function CoolifyPage() {
           title="Coolify"
           description="Create, configure, and deploy applications via Coolify."
         />
-        <Card className="border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-          <CardContent className="flex flex-col items-start gap-3 py-6 text-sm">
-            <p>Coolify is not connected yet.</p>
-            <Button asChild>
-              <Link href="/settings">Configure in Settings</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Callout tone="warn" title="Not connected">
+          <p>Coolify is not connected yet.</p>
+          <Button asChild>
+            <Link href="/settings">Configure in Settings</Link>
+          </Button>
+        </Callout>
       </div>
     );
   }

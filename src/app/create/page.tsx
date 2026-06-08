@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Callout } from "@/components/ui/callout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateDatabaseForm } from "@/components/create/create-database-form";
 import { CreateEnvSetForm } from "@/components/create/create-env-set-form";
@@ -35,16 +36,16 @@ export default async function CreatePage({
       />
 
       {noneConfigured ? (
-        <Card className="mb-6 border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-          <CardContent className="py-4 text-sm text-amber-800 dark:text-amber-300">
+        <Callout tone="warn" title="No servers configured" className="mb-6">
+          <p>
             No PostgreSQL servers are configured yet. Add a connection string for
             an environment on the{" "}
-            <a href="/settings" className="font-medium underline">
+            <a href="/settings" className="font-medium text-signal underline">
               Settings page
             </a>{" "}
             to get started.
-          </CardContent>
-        </Card>
+          </p>
+        </Callout>
       ) : null}
 
       <Card>
