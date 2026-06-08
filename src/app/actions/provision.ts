@@ -17,6 +17,8 @@ import { ProvisioningError } from "@/services/provisioning/types";
 import { registryService } from "@/services/registry";
 import { settingsService } from "@/services/settings";
 import { environmentsService } from "@/services/environments";
+import { auditService } from "@/services/audit";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 
 /** Client-safe shape returned after a successful single provision. */
 export interface ProvisionActionResult {
@@ -97,6 +99,19 @@ export async function createDatabaseAction(
       username: result.username,
       host: result.host,
       notes: data.notes || null,
+    });
+
+    await auditService.record({
+      action: AUDIT_ACTIONS.DATABASE_PROVISION,
+      summary: `Provisioned ${result.databaseName} on ${result.environment}`,
+      targetType: AUDIT_TARGET_TYPES.DATABASE,
+      targetId: result.databaseName,
+      environment: result.environment,
+      metadata: {
+        host: result.host,
+        username: result.username,
+        status: result.status,
+      },
     });
 
     revalidatePath("/registry");
@@ -187,10 +202,23 @@ export async function createEnvSetAction(
     }
   }
 
+  const anyOk = results.some((r) => r.ok);
+  await auditService.record({
+    action: AUDIT_ACTIONS.DATABASE_PROVISION,
+    summary: `Provisioned ${applicationName} across ${
+      results.filter((r) => r.ok).length
+    }/${results.length} environments`,
+    targetType: AUDIT_TARGET_TYPES.DATABASE,
+    targetId: applicationName,
+    success: anyOk,
+    metadata: {
+      results: results.map((r) => ({ environment: r.environment, ok: r.ok })),
+    },
+  });
+
   revalidatePath("/registry");
   revalidatePath("/dashboard");
 
-  const anyOk = results.some((r) => r.ok);
   return {
     ok: anyOk,
     error: anyOk ? undefined : "Provisioning failed on every environment.",
@@ -233,6 +261,13 @@ export async function savePostgresTargetAction(
   }
   try {
     await settingsService.set(POSTGRES_SETTING_KEYS(environment), parsed.data.trim());
+    await auditService.record({
+      action: AUDIT_ACTIONS.SETTINGS_UPDATE,
+      summary: `Saved PostgreSQL admin connection for ${environment}`,
+      targetType: AUDIT_TARGET_TYPES.SETTING,
+      targetId: POSTGRES_SETTING_KEYS(environment),
+      environment,
+    });
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");
@@ -258,6 +293,13 @@ export async function clearPostgresTargetAction(
   }
   try {
     await settingsService.delete(POSTGRES_SETTING_KEYS(environment));
+    await auditService.record({
+      action: AUDIT_ACTIONS.SETTINGS_UPDATE,
+      summary: `Cleared PostgreSQL admin connection for ${environment}`,
+      targetType: AUDIT_TARGET_TYPES.SETTING,
+      targetId: POSTGRES_SETTING_KEYS(environment),
+      environment,
+    });
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     revalidatePath("/create");

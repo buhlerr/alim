@@ -127,3 +127,25 @@ model Secret {
   @@index([name])
   @@map("secrets")
 }
+
+/// Append-only platform-wide log of state-changing actions. Decoupled from the
+/// rest of the schema (no foreign keys) so writing an audit entry can never
+/// fail a real operation and entries survive deletion of their targets. The
+/// `actor` is the configured single-admin identity (PROVISIONED_BY).
+model AuditLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  actor       String
+  action      String
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id")
+  summary     String
+  metadata    Json?
+  success     Boolean  @default(true)
+  environment String?
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetType])
+  @@map("audit_log")
+}

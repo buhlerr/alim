@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { environmentInputSchema } from "@/lib/validation";
 import { environmentsService } from "@/services/environments";
+import { auditService } from "@/services/audit";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 
 export interface EnvActionResult {
   ok: boolean;
@@ -37,6 +39,11 @@ export async function createEnvironmentAction(input: unknown): Promise<EnvAction
       readOnly: parsed.data.readOnly,
       requireWriteConfirm: parsed.data.requireWriteConfirm,
     });
+    await auditService.record({
+      action: AUDIT_ACTIONS.ENVIRONMENT_CREATE,
+      summary: `Created environment "${parsed.data.name}"`,
+      targetType: AUDIT_TARGET_TYPES.ENVIRONMENT,
+    });
     revalidateAll();
     return { ok: true };
   } catch {
@@ -65,6 +72,13 @@ export async function updateEnvironmentAction(
       readOnly: parsed.data.readOnly,
       requireWriteConfirm: parsed.data.requireWriteConfirm,
     });
+    await auditService.record({
+      action: AUDIT_ACTIONS.ENVIRONMENT_UPDATE,
+      summary: `Updated environment "${parsed.data.name}"`,
+      targetType: AUDIT_TARGET_TYPES.ENVIRONMENT,
+      targetId: key,
+      environment: key,
+    });
     revalidateAll();
     return { ok: true };
   } catch {
@@ -75,7 +89,16 @@ export async function updateEnvironmentAction(
 export async function deleteEnvironmentAction(key: string): Promise<EnvActionResult> {
   try {
     const res = await environmentsService.remove(key);
-    if (res.ok) revalidateAll();
+    if (res.ok) {
+      await auditService.record({
+        action: AUDIT_ACTIONS.ENVIRONMENT_DELETE,
+        summary: `Deleted environment ${key}`,
+        targetType: AUDIT_TARGET_TYPES.ENVIRONMENT,
+        targetId: key,
+        environment: key,
+      });
+      revalidateAll();
+    }
     return res;
   } catch {
     return { ok: false, error: "Could not delete the environment." };
@@ -85,6 +108,12 @@ export async function deleteEnvironmentAction(key: string): Promise<EnvActionRes
 export async function reorderEnvironmentsAction(keys: string[]): Promise<EnvActionResult> {
   try {
     await environmentsService.reorder(keys);
+    await auditService.record({
+      action: AUDIT_ACTIONS.ENVIRONMENT_REORDER,
+      summary: `Reordered ${keys.length} environments`,
+      targetType: AUDIT_TARGET_TYPES.ENVIRONMENT,
+      metadata: { order: keys },
+    });
     revalidateAll();
     return { ok: true };
   } catch {

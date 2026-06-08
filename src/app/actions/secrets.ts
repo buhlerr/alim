@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { createSecretSchema, updateSecretSchema } from "@/lib/secrets-validation";
 import { secretsService } from "@/services/secrets";
+import { auditService } from "@/services/audit";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 
 export interface ActionResult<T = undefined> {
   ok: boolean;
@@ -32,6 +34,12 @@ export async function createSecretAction(input: unknown): Promise<ActionResult> 
       value: parsed.data.value,
       category: parsed.data.category,
       description: parsed.data.description || null,
+    });
+    await auditService.record({
+      action: AUDIT_ACTIONS.SECRET_CREATE,
+      summary: `Created secret "${parsed.data.name}"`,
+      targetType: AUDIT_TARGET_TYPES.SECRET,
+      metadata: { category: parsed.data.category },
     });
     revalidatePath("/secrets");
     return { ok: true };
@@ -66,6 +74,13 @@ export async function updateSecretAction(
       category: parsed.data.category,
       description: parsed.data.description || null,
     });
+    await auditService.record({
+      action: AUDIT_ACTIONS.SECRET_UPDATE,
+      summary: `Updated secret "${parsed.data.name}"`,
+      targetType: AUDIT_TARGET_TYPES.SECRET,
+      targetId: id,
+      metadata: { valueChanged: Boolean(parsed.data.value) },
+    });
     revalidatePath("/secrets");
     return { ok: true };
   } catch (err) {
@@ -83,6 +98,12 @@ export async function updateSecretAction(
 export async function deleteSecretAction(id: string): Promise<ActionResult> {
   try {
     await secretsService.remove(id);
+    await auditService.record({
+      action: AUDIT_ACTIONS.SECRET_DELETE,
+      summary: `Deleted secret ${id}`,
+      targetType: AUDIT_TARGET_TYPES.SECRET,
+      targetId: id,
+    });
     revalidatePath("/secrets");
     return { ok: true };
   } catch {
@@ -102,6 +123,12 @@ export async function revealSecretAction(
           "Could not reveal this secret. It may be missing or encrypted under a different key.",
       };
     }
+    await auditService.record({
+      action: AUDIT_ACTIONS.SECRET_REVEAL,
+      summary: `Revealed secret ${id}`,
+      targetType: AUDIT_TARGET_TYPES.SECRET,
+      targetId: id,
+    });
     revalidatePath("/secrets");
     return { ok: true, data: { value } };
   } catch {

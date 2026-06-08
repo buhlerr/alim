@@ -123,9 +123,9 @@ export const MODULES: AppModule[] = [
     description: "Track every action taken across the platform.",
     icon: ScrollText,
     href: "/audit",
-    status: "coming-soon",
+    status: "available",
     group: "platform",
-    nav: [],
+    nav: [{ href: "/audit", label: "Audit Log", icon: ScrollText }],
   },
 ];
 
