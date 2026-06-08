@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { Callout } from "@/components/ui/callout";
 import { Button } from "@/components/ui/button";
 import { isEncryptionConfigured } from "@/lib/crypto";
 import { secretsService } from "@/services/secrets";
@@ -19,18 +19,16 @@ export default async function SecretsPage() {
           title="Secrets"
           description="Encrypted storage for API tokens and credentials."
         />
-        <Card className="border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
-          <CardContent className="flex flex-col items-start gap-3 py-6 text-sm">
-            <p>
-              Encryption is not configured. Set an{" "}
-              <code className="font-mono">ENCRYPTION_KEY</code> environment
-              variable to store and reveal secrets.
-            </p>
-            <Button asChild variant="outline">
-              <Link href="/settings">Open Settings</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Callout tone="warn" title="Not configured">
+          <p>
+            Encryption is not configured. Set an{" "}
+            <code className="font-mono text-foreground">ENCRYPTION_KEY</code>{" "}
+            environment variable to store and reveal secrets.
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/settings">Open Settings</Link>
+          </Button>
+        </Callout>
       </div>
     );
   }
