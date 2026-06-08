@@ -143,7 +143,7 @@ export default async function DashboardPage() {
                 Create full environment set
               </ActionButton>
               <ActionButton href="/registry" icon={<ListChecks />}>
-                Browse the registry
+                Browse databases
               </ActionButton>
               <ActionButton href="/cloudflare" icon={<Globe />}>
                 Configure Cloudflare tunnel
