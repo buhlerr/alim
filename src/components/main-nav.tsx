@@ -23,13 +23,11 @@ function Brand() {
       <img
         src="/aspyrelabs-logo.svg"
         alt="Aspyrelabs"
-        className="w-full max-w-[190px] dark:brightness-0 dark:invert"
+        className="w-full max-w-[190px]"
       />
       <div className="flex items-center gap-2.5">
-        <span className="grid h-4 w-4 place-items-center border border-signal shadow-[0_0_12px_-2px_hsl(var(--signal))]">
-          <span className="cr-corepulse h-1.5 w-1.5 bg-signal" />
-        </span>
-        <span className="font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-signal">
+        <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d]" />
+        <span className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-transparent">
           {BRAND.shortName}
         </span>
       </div>
