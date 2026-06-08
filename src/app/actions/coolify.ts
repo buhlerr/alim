@@ -19,6 +19,8 @@ import {
   envVarSchema,
   updateApplicationSchema,
 } from "@/lib/coolify-validation";
+import { auditService } from "@/services/audit";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 
 export interface ActionResult<T = undefined> {
   ok: boolean;
@@ -59,6 +61,12 @@ export async function saveCoolifyConfigAction(
     if (token) {
       await settingsService.set(COOLIFY_SETTING_KEYS.apiToken, token);
     }
+    await auditService.record({
+      action: AUDIT_ACTIONS.COOLIFY_CONFIG_SAVE,
+      summary: "Saved Coolify API connection",
+      targetType: AUDIT_TARGET_TYPES.SETTING,
+      metadata: { baseUrl: parsed.data.baseUrl, tokenChanged: Boolean(token) },
+    });
     revalidatePath("/settings");
     revalidatePath("/coolify");
     return { ok: true };
@@ -125,6 +133,13 @@ export async function createCoolifyApplicationAction(
       name: name || undefined,
       domains: domains || undefined,
     });
+    await auditService.record({
+      action: AUDIT_ACTIONS.COOLIFY_APP_CREATE,
+      summary: `Created Coolify application ${name || result.uuid}`,
+      targetType: AUDIT_TARGET_TYPES.COOLIFY_APP,
+      targetId: result.uuid,
+      metadata: { name: name || null, gitRepository: rest.git_repository },
+    });
     revalidatePath("/coolify");
     return { ok: true, data: result };
   } catch (err) {
@@ -138,6 +153,12 @@ export async function deployCoolifyApplicationAction(
 ): Promise<ActionResult<{ message?: string }>> {
   try {
     const res = await coolifyService.deploy(uuid);
+    await auditService.record({
+      action: AUDIT_ACTIONS.COOLIFY_APP_DEPLOY,
+      summary: `Deployed Coolify application ${uuid}`,
+      targetType: AUDIT_TARGET_TYPES.COOLIFY_APP,
+      targetId: uuid,
+    });
     revalidatePath(`/coolify/${uuid}`);
     return { ok: true, data: res };
   } catch (err) {
@@ -169,6 +190,13 @@ export async function setCoolifyEnvVarAction(
   }
   try {
     await coolifyService.setEnvVar(uuid, parsed.data.key, parsed.data.value);
+    await auditService.record({
+      action: AUDIT_ACTIONS.COOLIFY_ENV_UPDATE,
+      summary: `Set Coolify env var ${parsed.data.key} on ${uuid}`,
+      targetType: AUDIT_TARGET_TYPES.COOLIFY_APP,
+      targetId: uuid,
+      metadata: { key: parsed.data.key },
+    });
     revalidatePath(`/coolify/${uuid}`);
     return { ok: true };
   } catch (err) {
@@ -194,6 +222,12 @@ export async function updateCoolifyApplicationAction(
       domains: domains || undefined,
       build_command: build_command || undefined,
       start_command: start_command || undefined,
+    });
+    await auditService.record({
+      action: AUDIT_ACTIONS.COOLIFY_APP_CREATE,
+      summary: `Updated Coolify application ${uuid}`,
+      targetType: AUDIT_TARGET_TYPES.COOLIFY_APP,
+      targetId: uuid,
     });
     revalidatePath(`/coolify/${uuid}`);
     return { ok: true };
