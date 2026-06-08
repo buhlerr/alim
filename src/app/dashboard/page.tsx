@@ -9,26 +9,13 @@ import {
   CheckCircle2,
   XCircle,
   ScrollText,
+  ArrowRight,
+  Globe,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/page-header";
-import { EnvironmentBadge } from "@/components/environment-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { EnvironmentBadge } from "@/components/environment-badge";
+import { paletteEntry } from "@/lib/environment-palette";
 import { getAllTargetInfo } from "@/lib/targets";
 import { toSummary } from "@/lib/environments";
 import { environmentsService } from "@/services/environments";
@@ -64,243 +51,296 @@ export default async function DashboardPage() {
     return { key, name: e?.name ?? key, color: e?.color ?? "slate" };
   };
 
-  return (
-    <div>
-      <PageHeader
-        title="Dashboard"
-        description={`${BRAND.appName}: provision databases and manage infrastructure across Aspyre Labs environments.`}
-        action={
-          <Button asChild>
-            <Link href="/create">
-              <PlusCircle /> Create database
-            </Link>
-          </Button>
-        }
-      />
+  const availableCount = MODULES.filter((m) => m.status === "available").length;
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Modules
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  return (
+    <div className="space-y-14">
+      {/* ───── hero ───── */}
+      <section className="cr-rise flex flex-wrap items-end justify-between gap-6 border-b border-border pb-8">
+        <div>
+          <div className="mb-4 flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.32em] text-signal">
+            <span className="h-px w-7 bg-signal/60" />
+            Infrastructure Administration
+          </div>
+          <h1 className="font-display text-5xl font-bold uppercase leading-[0.92] tracking-tight md:text-6xl">
+            Infra
+            <br />
+            Control
+          </h1>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
+            {BRAND.appName}: provision databases and operate infrastructure
+            across every Aspyre Labs environment.
+          </p>
+        </div>
+        <Button asChild variant="signal" size="lg">
+          <Link href="/create">
+            <PlusCircle /> Provision Database
+          </Link>
+        </Button>
+      </section>
+
+      {/* ───── modules ───── */}
+      <Section
+        index="01"
+        title="Modules"
+        meta={`${availableCount} ONLINE`}
+        delay={0.06}
+      >
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((m) => (
             <ModuleCard key={m.id} module={m} />
           ))}
         </div>
-      </section>
+      </Section>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total databases"
-          value={stats.total}
-          icon={<Database className="h-4 w-4 text-muted-foreground" />}
-        />
-        {environments.map((env) => (
-          <StatCard
-            key={env.key}
-            title={env.name}
-            value={stats.byEnvironment[env.key] ?? 0}
-            icon={<Layers className="h-4 w-4 text-muted-foreground" />}
+      {/* ───── fleet telemetry ───── */}
+      <Section index="02" title="Fleet Telemetry" meta="LIVE" delay={0.12}>
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <StatReadout
+            label="Total Databases"
+            value={stats.total}
+            foot="ALL ENVIRONMENTS"
+            icon={<Database className="h-3.5 w-3.5" />}
           />
-        ))}
-        <StatCard
-          title="Configured servers"
-          value={`${configuredCount}/${targets.length}`}
-          icon={<Server className="h-4 w-4 text-muted-foreground" />}
-        />
-      </div>
+          {environments.map((env) => (
+            <StatReadout
+              key={env.key}
+              label={env.name}
+              value={stats.byEnvironment[env.key] ?? 0}
+              foot={env.key.toUpperCase()}
+              barClass={paletteEntry(env.color).dotClass}
+              icon={<Layers className="h-3.5 w-3.5" />}
+            />
+          ))}
+          <StatReadout
+            label="Configured Servers"
+            value={`${configuredCount}/${targets.length}`}
+            foot={
+              configuredCount === targets.length ? "FULL COVERAGE" : "PARTIAL"
+            }
+            icon={<Server className="h-3.5 w-3.5" />}
+          />
+        </div>
+      </Section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Integrations
-        </h2>
+      {/* ───── integrations ───── */}
+      <Section index="03" title="Integrations" delay={0.18}>
         <Suspense fallback={<IntegrationsSkeleton />}>
           <IntegrationsSection />
         </Suspense>
-      </section>
+      </Section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* Quick actions */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
-            <CardDescription>Common provisioning tasks.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button asChild variant="outline" className="w-full justify-start">
-              <Link href="/create">
-                <PlusCircle /> Create a single database
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-start">
-              <Link href="/create?mode=set">
-                <Layers /> Create full environment set
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-start">
-              <Link href="/registry">
-                <ListChecks /> Browse the registry
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {/* ───── operations ───── */}
+      <Section index="04" title="Operations" delay={0.24}>
+        <div className="grid gap-3.5 lg:grid-cols-[1fr_1.9fr]">
+          {/* quick actions */}
+          <Panel title="Quick Actions" corner="CMD">
+            <div className="flex flex-col gap-2">
+              <ActionButton href="/create" icon={<PlusCircle />}>
+                Create single database
+              </ActionButton>
+              <ActionButton href="/create?mode=set" icon={<Layers />}>
+                Create full environment set
+              </ActionButton>
+              <ActionButton href="/registry" icon={<ListChecks />}>
+                Browse the registry
+              </ActionButton>
+              <ActionButton href="/cloudflare" icon={<Globe />}>
+                Configure Cloudflare tunnel
+              </ActionButton>
+            </div>
+          </Panel>
 
-        {/* Server targets */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Server targets</CardTitle>
-            <CardDescription>
-              Manage these on the Settings page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {targets.map((t) => (
-              <div
-                key={t.environment}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <EnvironmentBadge environment={envBadge(t.environment)} />
-                  <span className="font-mono text-sm">
-                    {t.configured ? t.host : "—"}
-                  </span>
-                </div>
-                <span
-                  className={
-                    t.configured
-                      ? "text-xs font-medium text-emerald-600"
-                      : "text-xs font-medium text-muted-foreground"
-                  }
-                >
-                  {t.configured ? "Configured" : "Not configured"}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+          {/* server targets */}
+          <Panel
+            title="Server Targets"
+            corner={`${configuredCount}/${targets.length} ONLINE`}
+          >
+            <div className="space-y-2">
+              {targets.map((t) => {
+                const dot = paletteEntry(envBadge(t.environment).color).dotClass;
+                return (
+                  <div
+                    key={t.environment}
+                    className="flex items-center gap-4 border border-border bg-secondary/30 px-3.5 py-3 transition-colors hover:border-border/80"
+                  >
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot} ${
+                        t.configured ? "cr-blink" : "opacity-30"
+                      }`}
+                    />
+                    <EnvironmentBadge environment={envBadge(t.environment)} />
+                    <span className="flex-1 truncate font-mono text-[13px]">
+                      {t.configured ? t.host : "—"}
+                    </span>
+                    <span
+                      className={`font-mono text-[9.5px] uppercase tracking-[0.14em] ${
+                        t.configured ? "text-ok" : "text-muted-foreground/60"
+                      }`}
+                    >
+                      {t.configured ? "Online" : "Offline"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+        </div>
+      </Section>
 
-      {/* Recently provisioned */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Recently provisioned</CardTitle>
-          <CardDescription>The latest databases created.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* ───── recently provisioned ───── */}
+      <Section index="05" title="Recently Provisioned" meta="LAST 8" delay={0.3}>
+        <Panel>
           {recent.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="py-10 text-center text-sm text-muted-foreground">
               No databases provisioned yet.{" "}
-              <Link href="/create" className="underline">
+              <Link href="/create" className="text-signal underline">
                 Create your first one.
               </Link>
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Application</TableHead>
-                  <TableHead>Environment</TableHead>
-                  <TableHead>Database</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recent.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">
-                      {row.applicationName}
-                    </TableCell>
-                    <TableCell>
-                      <EnvironmentBadge environment={envBadge(row.environment)} />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {row.databaseName}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {row.host}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {row.createdAt.toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    {["Application", "Environment", "Database", "Host", "Created"].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          className="px-3 pb-3 text-left font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70"
+                        >
+                          {h}
+                        </th>
+                      ),
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recent.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/40"
+                    >
+                      <td className="px-3 py-3 font-display font-semibold">
+                        {row.applicationName}
+                      </td>
+                      <td className="px-3 py-3">
+                        <EnvironmentBadge environment={envBadge(row.environment)} />
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
+                        {row.databaseName}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
+                        {row.host}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-[11px] text-muted-foreground/70">
+                        {row.createdAt.toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </Panel>
+      </Section>
 
-      {/* Recent activity (audit) */}
-      <Card className="mt-6">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>The latest actions across the platform.</CardDescription>
-          </div>
+      {/* ───── activity stream ───── */}
+      <Section
+        index="06"
+        title="Activity Stream"
+        delay={0.36}
+        action={
           <Link
             href="/audit"
-            className="flex items-center gap-1 text-xs text-muted-foreground underline"
+            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-signal/80 hover:text-signal"
           >
-            <ScrollText className="h-3.5 w-3.5" /> View all
+            <ScrollText className="h-3.5 w-3.5" /> View full log
           </Link>
-        </CardHeader>
-        <CardContent>
+        }
+      >
+        <Panel>
           {activity.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No activity yet.</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No activity yet.
+            </p>
           ) : (
-            <div className="space-y-1">
+            <div className="font-mono text-[12px]">
               {activity.map((entry) => (
                 <ActivityRow key={entry.id} entry={entry} />
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Panel>
+      </Section>
     </div>
   );
 }
 
-function ActivityRow({ entry }: { entry: AuditLogRow }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-      <div className="flex min-w-0 items-center gap-2">
-        {entry.success ? (
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-        ) : (
-          <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
-        )}
-        <span className="shrink-0 font-medium">{actionLabel(entry.action)}</span>
-        <span className="truncate text-muted-foreground">{entry.summary}</span>
-      </div>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {entry.createdAt.toLocaleString()}
-      </span>
-    </div>
-  );
-}
+/* ─────────────────────── building blocks ─────────────────────── */
 
-function StatCard({
+function Section({
+  index,
   title,
-  value,
-  icon,
+  meta,
+  action,
+  delay = 0,
+  children,
 }: {
+  index: string;
   title: string;
-  value: number | string;
-  icon: React.ReactNode;
+  meta?: string;
+  action?: React.ReactNode;
+  delay?: number;
+  children: React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <section className="cr-rise" style={{ animationDelay: `${delay}s` }}>
+      <div className="mb-5 flex items-center gap-3.5">
+        <span className="font-mono text-[11px] tracking-[0.1em] text-signal">
+          {index}
+        </span>
+        <h2 className="font-display text-sm font-semibold uppercase tracking-[0.18em]">
           {title}
-        </CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
+        </h2>
+        <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+        {meta ? (
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/60">
+            {meta}
+          </span>
+        ) : null}
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Panel({
+  title,
+  corner,
+  children,
+}: {
+  title?: string;
+  corner?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-border bg-card">
+      {title ? (
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <span className="font-display text-[13px] font-semibold uppercase tracking-[0.08em]">
+            {title}
+          </span>
+          {corner ? (
+            <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-muted-foreground/60">
+              {corner}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="p-5">{children}</div>
+    </div>
   );
 }
 
@@ -308,28 +348,34 @@ function ModuleCard({ module: m }: { module: AppModule }) {
   const Icon = m.icon;
   const available = m.status === "available";
   const inner = (
-    <Card
-      className={
+    <div
+      className={`bracket-host group relative h-full overflow-hidden border border-border bg-card p-5 transition-all ${
         available
-          ? "h-full transition-colors hover:border-primary/50"
-          : "h-full opacity-60"
-      }
+          ? "hover:-translate-y-0.5 hover:border-signal"
+          : "opacity-50"
+      }`}
     >
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-muted-foreground" />
-          <CardTitle className="text-base">{m.name}</CardTitle>
+      <span className="bracket-tr" />
+      {!available ? (
+        <span className="absolute right-4 top-4 border border-border px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.16em] text-muted-foreground/60">
+          Soon
+        </span>
+      ) : null}
+      <div className="mb-4 grid h-10 w-10 place-items-center border border-border text-signal transition-colors group-hover:bg-signal/10">
+        <Icon className="h-[18px] w-[18px]" />
+      </div>
+      <h3 className="font-display text-base font-semibold tracking-[0.02em]">
+        {m.name}
+      </h3>
+      <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
+        {m.description}
+      </p>
+      {available ? (
+        <div className="mt-4 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-signal/70 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 [transform:translateX(-6px)]">
+          Enter module <ArrowRight className="h-3 w-3" />
         </div>
-        {available ? null : (
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">
-            Soon
-          </span>
-        )}
-      </CardHeader>
-      <CardContent>
-        <CardDescription>{m.description}</CardDescription>
-      </CardContent>
-    </Card>
+      ) : null}
+    </div>
   );
   return available ? (
     <Link href={m.href} className="block">
@@ -337,5 +383,83 @@ function ModuleCard({ module: m }: { module: AppModule }) {
     </Link>
   ) : (
     <div>{inner}</div>
+  );
+}
+
+function StatReadout({
+  label,
+  value,
+  foot,
+  barClass = "bg-signal",
+  icon,
+}: {
+  label: string;
+  value: number | string;
+  foot: string;
+  barClass?: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="relative overflow-hidden border border-border bg-card p-5">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/60">
+          {label}
+        </span>
+        <span className="text-muted-foreground/50">{icon}</span>
+      </div>
+      <div className="my-3.5 font-display text-[42px] font-bold leading-none tabular-nums">
+        {value}
+      </div>
+      <div className="h-[3px] overflow-hidden bg-secondary">
+        <div className={`cr-fill h-full w-full ${barClass}`} />
+      </div>
+      <div className="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.06em] text-muted-foreground/50">
+        {foot}
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3.5 border border-border bg-secondary/30 px-4 py-3.5 font-mono text-[12px] tracking-[0.02em] transition-all hover:translate-x-1 hover:border-signal hover:bg-secondary/60"
+    >
+      <span className="text-signal [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+      {children}
+      <ArrowRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/50 transition-all group-hover:translate-x-1 group-hover:text-signal" />
+    </Link>
+  );
+}
+
+function ActivityRow({ entry }: { entry: AuditLogRow }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-dashed border-border py-2.5 last:border-0">
+      <span
+        className={`w-4 shrink-0 text-center ${
+          entry.success ? "text-ok" : "text-danger"
+        }`}
+      >
+        {entry.success ? "✓" : "✕"}
+      </span>
+      <span className="shrink-0 uppercase tracking-[0.04em] text-signal">
+        {actionLabel(entry.action)}
+      </span>
+      <span className="flex-1 truncate text-muted-foreground">
+        {entry.summary}
+      </span>
+      <span className="shrink-0 text-[10px] text-muted-foreground/60">
+        {entry.createdAt.toLocaleString()}
+      </span>
+    </div>
   );
 }
