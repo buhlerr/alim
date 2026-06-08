@@ -54,7 +54,7 @@ export const MODULES: AppModule[] = [
     nav: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/create", label: "Create", icon: PlusCircle },
-      { href: "/registry", label: "Registry", icon: ListChecks },
+      { href: "/registry", label: "Databases", icon: ListChecks },
     ],
   },
   {

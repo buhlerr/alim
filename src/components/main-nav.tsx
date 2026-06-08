@@ -48,7 +48,7 @@ const SIDEBAR: NavSection[] = [
     label: "Database",
     items: [
       { href: "/create", label: "Create", icon: PlusCircle },
-      { href: "/registry", label: "Registry", icon: ListChecks },
+      { href: "/registry", label: "Databases", icon: ListChecks },
       { href: "/query", label: "Query", icon: TerminalSquare },
     ],
   },

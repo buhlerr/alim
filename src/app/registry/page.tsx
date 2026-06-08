@@ -41,7 +41,7 @@ export default async function RegistryPage({
   return (
     <div>
       <PageHeader
-        title="Registry"
+        title="Databases"
         description={`${rows.length} provisioned database${rows.length === 1 ? "" : "s"}.`}
       />
 
