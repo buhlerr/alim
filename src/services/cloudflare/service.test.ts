@@ -151,4 +151,43 @@ describe("testConnection", () => {
     expect(res.ok).toBe(false);
     expect(res.message).toMatch(/rejected/);
   });
+
+  it("verifies an explicitly provided token without using saved config", async () => {
+    f.mockResolvedValue({ status: "active" });
+    await cloudflareService.testConnection("explicit-token");
+    expect(f).toHaveBeenCalledWith({
+      path: "/user/tokens/verify",
+      tokenOverride: "explicit-token",
+    });
+  });
+
+  it("guides toward API Token vs Global API Key on a 401", async () => {
+    f.mockRejectedValue(new CloudflareError("rejected", "INVALID_TOKEN"));
+    const res = await cloudflareService.testConnection();
+    expect(res.ok).toBe(false);
+    expect(res.message).toMatch(/API Token/i);
+    expect(res.message).toMatch(/Global API Key/i);
+  });
+
+  it("treats a malformed-token 400 like an invalid token", async () => {
+    f.mockRejectedValue(new CloudflareError("Cloudflare returned an unexpected error (HTTP 400).", "HTTP_400"));
+    const res = await cloudflareService.testConnection();
+    expect(res.ok).toBe(false);
+    expect(res.message).toMatch(/API Token/i);
+    expect(res.message).toMatch(/Global API Key/i);
+  });
+
+  it("explains a permission failure on a 403", async () => {
+    f.mockRejectedValue(new CloudflareError("forbidden", "FORBIDDEN"));
+    const res = await cloudflareService.testConnection();
+    expect(res.ok).toBe(false);
+    expect(res.message).toMatch(/permission/i);
+  });
+
+  it("flags a valid-but-inactive token", async () => {
+    f.mockResolvedValue({ status: "disabled" });
+    const res = await cloudflareService.testConnection();
+    expect(res.ok).toBe(false);
+    expect(res.message).toMatch(/disabled/i);
+  });
 });

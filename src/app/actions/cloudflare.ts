@@ -118,9 +118,19 @@ export async function saveCloudflareConfigAction(input: unknown): Promise<Action
   }
 }
 
-export async function testCloudflareConnectionAction(): Promise<CloudflareConnectionResult> {
+export async function testCloudflareConnectionAction(
+  input?: unknown,
+): Promise<CloudflareConnectionResult> {
+  // Optionally test a token the user typed but hasn't saved yet.
+  const token =
+    typeof input === "object" && input !== null && "apiToken" in input
+      ? String((input as { apiToken?: unknown }).apiToken ?? "").trim()
+      : "";
+
+  if (token) return cloudflareService.testConnection(token);
+
   if (!(await isCloudflareConfigured())) {
-    return { ok: false, message: "Cloudflare is not configured yet." };
+    return { ok: false, message: "Enter an API token to test, or save one first." };
   }
   return cloudflareService.testConnection();
 }
