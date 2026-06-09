@@ -24,6 +24,7 @@ import {
   approveMigrationAction,
   rollbackMigrationAction,
   getMigrationJobAction,
+  retryMigrationAction,
 } from "@/app/actions/migration";
 import type { MigrationJobWithRelations } from "@/services/migration/store";
 import { isTerminalStatus } from "@/lib/migration";
@@ -97,6 +98,17 @@ export function MigrationJobView({
     setJob(res.data);
   }
 
+  async function retry() {
+    setActing(true);
+    const res = await retryMigrationAction(job.id);
+    setActing(false);
+    if (!res.ok || !res.data) {
+      toast.error(res.error ?? "Retry failed.");
+      return;
+    }
+    setJob(res.data);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -111,8 +123,25 @@ export function MigrationJobView({
 
       {job.errorMessage ? (
         <Card className="border-red-500/40">
-          <CardContent className="pt-6 text-sm text-red-500">{job.errorMessage}</CardContent>
+          <CardContent className="pt-6 space-y-3">
+            <p className="text-sm text-red-500">{job.errorMessage}</p>
+            {job.status === "failed" ? (
+              <Button variant="outline" size="sm" onClick={retry} disabled={acting}>
+                {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Retry
+              </Button>
+            ) : null}
+          </CardContent>
         </Card>
+      ) : null}
+
+      {job.status === "failed" && !job.errorMessage ? (
+        <div>
+          <Button variant="outline" size="sm" onClick={retry} disabled={acting}>
+            {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Retry
+          </Button>
+        </div>
       ) : null}
 
       {job.status === "awaiting_approval" ? (

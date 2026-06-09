@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    migrationJob: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
+    migrationJob: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), deleteMany: vi.fn(), delete: vi.fn() },
     migrationStep: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     migrationLog: { create: vi.fn() },
     migrationArtifact: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { migrationStore } from "./store";
 
 const job = prisma.migrationJob as unknown as Record<string, ReturnType<typeof vi.fn>>;
+const step = prisma.migrationStep as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -61,5 +62,47 @@ describe("migrationStore.deleteTerminalJobs", () => {
     expect(job.deleteMany).toHaveBeenCalledWith({
       where: { status: { in: ["completed", "failed", "rolled_back"] } },
     });
+  });
+});
+
+describe("migrationStore.resetFailedStep", () => {
+  it("returns false when no step has status failed", async () => {
+    step.findMany.mockResolvedValue([
+      { key: "validate", status: "success", order: 0 },
+      { key: "provision", status: "running", order: 1 },
+    ]);
+    const result = await migrationStore.resetFailedStep("job-1");
+    expect(result).toBe(false);
+    expect(step.update).not.toHaveBeenCalled();
+    expect(job.update).not.toHaveBeenCalled();
+  });
+
+  it("resets the failed step to pending and restores job status/error", async () => {
+    step.findMany.mockResolvedValue([
+      { key: "validate", status: "success", order: 0 },
+      { key: "provision", status: "failed", order: 1 },
+    ]);
+    step.update.mockResolvedValue({ key: "provision", status: "pending" });
+    job.update.mockResolvedValue({ id: "job-1", status: "provisioning", errorMessage: null });
+
+    const result = await migrationStore.resetFailedStep("job-1");
+    expect(result).toBe(true);
+
+    expect(step.update).toHaveBeenCalledWith({
+      where: { jobId_key: { jobId: "job-1", key: "provision" } },
+      data: { status: "pending", detail: null, finishedAt: null },
+    });
+    expect(job.update).toHaveBeenCalledWith({
+      where: { id: "job-1" },
+      data: { status: "provisioning", errorMessage: null },
+    });
+  });
+});
+
+describe("migrationStore.deleteJob", () => {
+  it("calls prisma delete with the given job id", async () => {
+    job.delete.mockResolvedValue({ id: "job-1" });
+    await migrationStore.deleteJob("job-1");
+    expect(job.delete).toHaveBeenCalledWith({ where: { id: "job-1" } });
   });
 });

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import type { MigrationJobRow } from "@/services/migration/store";
 import { MigrationStatusBadge } from "./migration-status-badge";
+import { MigrationRowActions } from "./migration-row-actions";
 
 export function MigrationList({ jobs }: { jobs: MigrationJobRow[] }) {
   if (jobs.length === 0) {
@@ -29,6 +30,7 @@ export function MigrationList({ jobs }: { jobs: MigrationJobRow[] }) {
           <TableHead>Route</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Created</TableHead>
+          <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -55,6 +57,9 @@ export function MigrationList({ jobs }: { jobs: MigrationJobRow[] }) {
             </TableCell>
             <TableCell className="text-xs text-muted-foreground">
               {new Date(job.createdAt).toLocaleString()}
+            </TableCell>
+            <TableCell className="w-10 text-right">
+              <MigrationRowActions jobId={job.id} status={job.status} />
             </TableCell>
           </TableRow>
         ))}

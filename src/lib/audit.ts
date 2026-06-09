@@ -55,6 +55,8 @@ export const AUDIT_ACTIONS = {
   MIGRATION_ROLLBACK: "migration.rollback",
   MIGRATION_COMPLETE: "migration.complete",
   MIGRATION_CLEAR: "migration.clear",
+  MIGRATION_RETRY: "migration.retry",
+  MIGRATION_DELETE: "migration.delete",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -131,6 +133,8 @@ export function actionLabel(action: string): string {
     [AUDIT_ACTIONS.MIGRATION_ROLLBACK]: "Rolled back migration",
     [AUDIT_ACTIONS.MIGRATION_COMPLETE]: "Completed migration",
     [AUDIT_ACTIONS.MIGRATION_CLEAR]: "Cleared finished migrations",
+    [AUDIT_ACTIONS.MIGRATION_RETRY]: "Retried migration",
+    [AUDIT_ACTIONS.MIGRATION_DELETE]: "Deleted migration",
   };
   return labels[action] ?? action;
 }

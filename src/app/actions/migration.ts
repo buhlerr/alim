@@ -10,7 +10,7 @@ import { approvalService } from "@/services/migration/approval";
 import { validationService, type ValidationReport } from "@/services/migration/validation";
 import { platformProvider } from "@/services/migration/provider";
 import { buildPlan, type StepDef } from "@/services/migration/planner";
-import { defaultFlags, type MigrationType } from "@/lib/migration";
+import { defaultFlags, isTerminalStatus, type MigrationType } from "@/lib/migration";
 import type { HostCapacity, HostSummary, ResourceSummary } from "@/services/migration/types";
 import { auditService } from "@/services/audit";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
@@ -181,6 +181,46 @@ export async function rollbackMigrationAction(
   revalidatePath(`/migrations/${jobId}`);
   const job = await migrationStore.getJobWithRelations(jobId);
   return { ok: true, data: job! };
+}
+
+/** Reset the failed step so the orchestrator advance loop can resume. */
+export async function retryMigrationAction(
+  jobId: string,
+): Promise<ActionResult<MigrationJobWithRelations>> {
+  const job = await migrationStore.getJob(jobId);
+  if (!job) return { ok: false, error: "Migration job not found." };
+  if (job.status !== "failed") {
+    return { ok: false, error: "Only a failed migration can be retried." };
+  }
+  const reset = await migrationStore.resetFailedStep(jobId);
+  if (!reset) return { ok: false, error: "No failed step to retry." };
+  await auditService.record({
+    action: AUDIT_ACTIONS.MIGRATION_RETRY,
+    targetType: AUDIT_TARGET_TYPES.MIGRATION,
+    targetId: jobId,
+    summary: `Retried migration for ${job.sourceResourceName}`,
+  });
+  revalidatePath(`/migrations/${jobId}`);
+  const refreshed = await migrationStore.getJobWithRelations(jobId);
+  return { ok: true, data: refreshed! };
+}
+
+/** Delete a single terminal migration job (completed/failed/rolled_back). */
+export async function deleteMigrationAction(jobId: string): Promise<ActionResult> {
+  const job = await migrationStore.getJob(jobId);
+  if (!job) return { ok: false, error: "Migration job not found." };
+  if (!isTerminalStatus(job.status)) {
+    return { ok: false, error: "Only finished migrations can be deleted." };
+  }
+  await migrationStore.deleteJob(jobId);
+  await auditService.record({
+    action: AUDIT_ACTIONS.MIGRATION_DELETE,
+    targetType: AUDIT_TARGET_TYPES.MIGRATION,
+    targetId: jobId,
+    summary: `Deleted ${job.migrationType} of ${job.sourceResourceName}`,
+  });
+  revalidatePath("/migrations");
+  return { ok: true };
 }
 
 /** Remove finished migrations (completed/failed/rolled_back) from the list. */
