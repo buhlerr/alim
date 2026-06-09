@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Info, Loader2, XCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import type { MigrationType } from "@/lib/migration";
 
 export function MigrationWizard({ options }: { options: MigrationOptions }) {
   const router = useRouter();
-  const [step, setStep] = React.useState(1);
   const [sourceResourceId, setSourceResourceId] = React.useState(options.resources[0]?.id ?? "");
   const [migrationType, setMigrationType] = React.useState<MigrationType>("migrate");
   const [destinationHost, setDestinationHost] = React.useState("");
@@ -71,7 +70,6 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
     setPreview(res.data);
     setNpmEnabled(res.data.report.defaults.npmEnabled);
     setCloudflareEnabled(res.data.report.defaults.cloudflareEnabled);
-    setStep(4);
   }
 
   async function execute() {
@@ -214,9 +212,9 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
                 </label>
               </div>
             ) : null}
-            <Button variant="secondary" disabled={!validationOk} onClick={() => setStep(5)}>
-              Review plan
-              <ArrowRight className="h-4 w-4" />
+            <Button disabled={!validationOk || busy} onClick={execute}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {migrationType === "clone" ? "Clone" : "Migrate"}
             </Button>
             {!validationOk ? (
               <p className="text-xs text-red-500">Fix the failing checks above (rename the destination if it is a duplicate) and re-validate.</p>
@@ -225,34 +223,6 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
         </Card>
       ) : null}
 
-      {/* Step 5: Plan */}
-      {preview && step >= 5 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>5 · Migration plan</CardTitle>
-            <CardDescription>Exactly what will happen, in order.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="list-decimal space-y-1 pl-5 text-sm">
-              {preview.plan.map((s) => {
-                const willSkip =
-                  ["archive_volumes", "transfer_volumes", "restore_volumes"].includes(s.key) &&
-                  preview.report.volumes.length === 0;
-                return (
-                  <li key={s.key} className={willSkip ? "text-muted-foreground" : ""}>
-                    {s.label}
-                    {willSkip ? " (will be skipped, no volumes)" : ""}
-                  </li>
-                );
-              })}
-            </ol>
-            <Button onClick={execute} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Execute {migrationType}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }
