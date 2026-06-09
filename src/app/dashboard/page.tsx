@@ -63,13 +63,11 @@ export default async function DashboardPage() {
             Infrastructure Administration
           </div>
           <h1 className="font-display text-5xl font-bold uppercase leading-[0.92] tracking-tight md:text-6xl">
-            Infra
-            <br />
-            Control
-          </h1>
+            Dashboard
+            </h1>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
             {BRAND.appName}: provision databases and operate infrastructure
-            across every Aspyre Labs environment.
+            across every environment.
           </p>
         </div>
         <Button asChild variant="signal" size="lg">
@@ -93,8 +91,8 @@ export default async function DashboardPage() {
         </div>
       </Section>
 
-      {/* ───── fleet telemetry ───── */}
-      <Section index="02" title="Fleet Telemetry" meta="LIVE" delay={0.12}>
+      {/* ───── Summary ───── */}
+      <Section index="02" title="Summary" meta="LIVE" delay={0.12}>
         <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <StatReadout
             label="Total Databases"
