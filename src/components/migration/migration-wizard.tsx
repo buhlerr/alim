@@ -107,7 +107,10 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectTrigger><SelectValue placeholder="Choose a resource" /></SelectTrigger>
             <SelectContent>
               {options.resources.map((r) => (
-                <SelectItem key={r.id} value={r.id}>{r.name} ({r.environment})</SelectItem>
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                  {r.hostName ? ` (${r.hostName})` : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
