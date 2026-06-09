@@ -10,7 +10,9 @@ export interface SshTarget {
   privateKey: string;
 }
 
-const CONNECT_TIMEOUT_MS = 30_000;
+// Keep the connection establishment short so an unreachable host fails fast
+// (capacity probes and volume ops must not hang for ~30s on a dead host).
+const CONNECT_TIMEOUT_MS = 10_000;
 
 /** Only paths of the form /tmp/<safe-name>.tar.gz are accepted. */
 const ARCHIVE_PATH_RE = /^\/tmp\/[A-Za-z0-9_.-]+\.tar\.gz$/;

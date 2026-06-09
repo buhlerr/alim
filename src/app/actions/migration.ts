@@ -46,9 +46,19 @@ export async function getMigrationOptionsAction(): Promise<MigrationOptions> {
     platformProvider.listHosts(),
     coolifyService.listProjects(),
   ]);
-  const hostInfos = await Promise.all(
-    hosts.map(async (h) => ({ ...h, capacity: await platformProvider.getHostCapacity(h.id) })),
-  );
+  // Capacity is advisory and SSH-measured per host, which is slow and can hang
+  // on unreachable hosts. Do NOT probe every host on wizard load; capacity is
+  // measured (best effort) only for the chosen destination at validation time.
+  const hostInfos = hosts.map((h) => ({
+    ...h,
+    capacity: {
+      hostId: h.id,
+      reachable: true,
+      freeMemoryMb: 0,
+      freeDiskMb: 0,
+      metricsAvailable: false,
+    },
+  }));
   const projects = await Promise.all(
     projectList.map(async (p) => {
       const detail = await coolifyService.getProject(p.uuid);
