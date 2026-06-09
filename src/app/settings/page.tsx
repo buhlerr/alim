@@ -1,6 +1,10 @@
-import { Cloud, Database, Globe, Layers, Network } from "lucide-react";
+import { Cloud, Database, Globe, Layers, Network, Server } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { Callout } from "@/components/ui/callout";
+import { isEncryptionConfigured } from "@/lib/crypto";
+import { HostCredentialsManager } from "@/components/hosts/host-credentials-manager";
+import { getHostCredentialOptionsAction } from "@/app/actions/hosts";
 import { EnvironmentsSection } from "@/components/settings/environments-section";
 import { environmentsService } from "@/services/environments";
 import { toSummary } from "@/lib/environments";
@@ -50,6 +54,12 @@ export default async function SettingsPage() {
     (await settingsService.get(CLOUDFLARE_SETTING_KEYS.accountId)) ??
     process.env.CLOUDFLARE_ACCOUNT_ID ??
     "";
+
+  const hostsEncryptionConfigured = isEncryptionConfigured();
+  const hostResult = hostsEncryptionConfigured
+    ? await getHostCredentialOptionsAction()
+    : null;
+  const hostServers = hostResult?.ok && hostResult.data ? hostResult.data.servers : [];
 
   return (
     <div>
@@ -168,6 +178,28 @@ export default async function SettingsPage() {
             />
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <Server className="h-4 w-4" /> SSH host credentials
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          SSH access to each host, used by the migration engine for volume
+          transfer and measured capacity. Keys are stored encrypted (AES-256-GCM)
+          and never displayed. Use Import from Coolify to pull existing keys.
+        </p>
+        {hostsEncryptionConfigured ? (
+          <HostCredentialsManager servers={hostServers} />
+        ) : (
+          <Callout tone="warn" title="Not configured">
+            <p>
+              Set an{" "}
+              <code className="font-mono text-foreground">ENCRYPTION_KEY</code>{" "}
+              before storing SSH credentials.
+            </p>
+          </Callout>
+        )}
       </div>
     </div>
   );

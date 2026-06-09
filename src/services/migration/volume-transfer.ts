@@ -37,13 +37,13 @@ export const mockVolumeTransfer: VolumeTransferService = {
 /**
  * Resolves a Coolify server UUID to an SshTarget using the stored host
  * credential. Throws NO_SSH_CREDENTIAL when none is found (user must add
- * credentials at /hosts before running a volume migration).
+ * credentials at /settings before running a volume migration).
  */
 async function targetFor(serverUuid: string): Promise<SshTarget> {
   const cred = await hostCredentialsService.getByServerUuid(serverUuid);
   if (!cred) {
     throw new MigrationError(
-      "No SSH credential for host " + serverUuid + ". Add one at /hosts.",
+      "No SSH credential for host " + serverUuid + ". Add one at /settings.",
       "NO_SSH_CREDENTIAL",
     );
   }
@@ -89,5 +89,5 @@ export const realVolumeTransfer: VolumeTransferService = {
 };
 
 /** The active transfer implementation. Requires a host SSH credential (added
- * at /hosts) and reachable hosts; unit tests cover the wiring with mocked ssh. */
+ * at /settings) and reachable hosts; unit tests cover the wiring with mocked ssh. */
 export const volumeTransfer: VolumeTransferService = realVolumeTransfer;

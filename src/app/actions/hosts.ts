@@ -114,7 +114,7 @@ export async function saveHostCredentialAction(input: unknown): Promise<ActionRe
       metadata: { serverUuid: parsed.data.coolifyServerUuid, ip: parsed.data.ipAddress },
     });
 
-    revalidatePath("/hosts");
+    revalidatePath("/settings");
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not save the host credential." };
@@ -151,7 +151,7 @@ export async function importCoolifyHostCredentialsAction(): Promise<
       metadata: { imported, skippedCount: skipped.length },
     });
 
-    revalidatePath("/hosts");
+    revalidatePath("/settings");
     return { ok: true, data: { imported, skipped } };
   } catch {
     return { ok: false, error: "Could not import host credentials from Coolify." };
@@ -167,7 +167,7 @@ export async function deleteHostCredentialAction(id: string): Promise<ActionResu
       targetType: AUDIT_TARGET_TYPES.HOST_CREDENTIAL,
       targetId: id,
     });
-    revalidatePath("/hosts");
+    revalidatePath("/settings");
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not delete the host credential." };
