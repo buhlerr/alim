@@ -45,6 +45,13 @@ export interface CoolifyApplication {
   build_pack?: string | null;
   ports_exposes?: string | null;
   description?: string | null;
+  /** Build configuration that the create endpoints do not accept and must be
+   * replicated via PATCH after creation. */
+  install_command?: string | null;
+  build_command?: string | null;
+  start_command?: string | null;
+  base_directory?: string | null;
+  publish_directory?: string | null;
   /** Integer environment id; resolve to project+environment via /projects. */
   environment_id?: number | null;
   /** Git source binding. source_type "App\\Models\\GithubApp" uses a GitHub App
@@ -142,8 +149,11 @@ export interface CreateApplicationRequest {
 
 export interface UpdateApplicationRequest {
   domains?: string;
+  install_command?: string;
   build_command?: string;
   start_command?: string;
+  base_directory?: string;
+  publish_directory?: string;
   name?: string;
   description?: string;
 }

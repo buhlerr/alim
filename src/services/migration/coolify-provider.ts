@@ -110,6 +110,13 @@ export const coolifyPlatformProvider: PlatformProvider = {
         // GitHub App rather than the public-repo endpoint (which lacks auth).
         source_id: app.source_id ?? null,
         source_type: app.source_type ?? "",
+        // Build configuration replicated via PATCH after the destination is
+        // created (the create endpoints do not accept these).
+        install_command: app.install_command ?? null,
+        build_command: app.build_command ?? null,
+        start_command: app.start_command ?? null,
+        base_directory: app.base_directory ?? null,
+        publish_directory: app.publish_directory ?? null,
       },
       volumes,
     };
@@ -162,6 +169,24 @@ export const coolifyPlatformProvider: PlatformProvider = {
         ...common,
         git_repository: toGitUrl(gitRepo),
       });
+    }
+
+    // Replicate build configuration the create endpoints do not accept (install/
+    // build/start commands, base/publish directories). Only send fields that are
+    // actually set on the source so we never clear a default with an empty value.
+    const buildPatch: Record<string, string> = {};
+    for (const field of [
+      "install_command",
+      "build_command",
+      "start_command",
+      "base_directory",
+      "publish_directory",
+    ] as const) {
+      const value = cfg[field];
+      if (typeof value === "string" && value.length > 0) buildPatch[field] = value;
+    }
+    if (Object.keys(buildPatch).length > 0) {
+      await coolifyService.updateApplication(created.uuid, buildPatch);
     }
 
     if (spec.snapshot.envVars.length > 0) {

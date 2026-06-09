@@ -136,6 +136,32 @@ describe("coolifyPlatformProvider action methods", () => {
     expect(cs.setEnvVarsBulk).toHaveBeenCalledWith("dest1", [{ key: "NODE_ENV", value: "production" }]);
   });
 
+  it("createResource replicates set build commands/directories via PATCH, skipping empty ones", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.updateApplication.mockResolvedValue(undefined);
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: {
+        ...snapshot,
+        buildConfig: {
+          ...snapshot.buildConfig,
+          install_command: "",
+          build_command: "npm install && npm run build",
+          start_command: "npm start",
+          base_directory: "/",
+          publish_directory: "/",
+        },
+      },
+    } as any);
+    expect(cs.updateApplication).toHaveBeenCalledWith("dest1", {
+      build_command: "npm install && npm run build",
+      start_command: "npm start",
+      base_directory: "/",
+      publish_directory: "/",
+    });
+  });
+
   it("createResource uses the private GitHub App path for a private-repo source", async () => {
     cs.listGithubApps.mockResolvedValue([
       { id: 0, uuid: "public-gh", name: "Public GitHub", is_public: true },
