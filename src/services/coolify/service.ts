@@ -4,9 +4,13 @@ import {
   CoolifyError,
   type CoolifyApplication,
   type CoolifyConnectionResult,
+  type CoolifyDeployment,
+  type CoolifyDeployResponse,
   type CoolifyEnvVar,
   type CoolifyProject,
   type CoolifyServer,
+  type CoolifyServerResource,
+  type CoolifyStoragesResponse,
   type CreateApplicationRequest,
   type UpdateApplicationRequest,
 } from "./types";
@@ -64,11 +68,8 @@ export const coolifyService = {
     });
   },
 
-  async deploy(uuid: string): Promise<{ message?: string }> {
-    return coolifyFetch<{ message?: string }>({
-      path: "/deploy",
-      query: { uuid },
-    });
+  async deploy(uuid: string): Promise<CoolifyDeployResponse> {
+    return coolifyFetch<CoolifyDeployResponse>({ path: "/deploy", query: { uuid } });
   },
 
   async listEnvVars(uuid: string): Promise<CoolifyEnvVar[]> {
@@ -89,5 +90,41 @@ export const coolifyService = {
 
   async listServers(): Promise<CoolifyServer[]> {
     return coolifyFetch<CoolifyServer[]>({ path: "/servers" });
+  },
+
+  async getServer(uuid: string): Promise<CoolifyServer> {
+    return coolifyFetch<CoolifyServer>({ path: `/servers/${uuid}` });
+  },
+
+  async getProject(uuid: string): Promise<CoolifyProject> {
+    return coolifyFetch<CoolifyProject>({ path: `/projects/${uuid}` });
+  },
+
+  async listServerResources(uuid: string): Promise<CoolifyServerResource[]> {
+    return coolifyFetch<CoolifyServerResource[]>({ path: `/servers/${uuid}/resources` });
+  },
+
+  async listStorages(uuid: string): Promise<CoolifyStoragesResponse> {
+    return coolifyFetch<CoolifyStoragesResponse>({ path: `/applications/${uuid}/storages` });
+  },
+
+  async getDeployment(uuid: string): Promise<CoolifyDeployment> {
+    return coolifyFetch<CoolifyDeployment>({ path: `/deployments/${uuid}` });
+  },
+
+  async startApplication(uuid: string): Promise<void> {
+    await coolifyFetch<void>({ path: `/applications/${uuid}/start` });
+  },
+
+  async stopApplication(uuid: string): Promise<void> {
+    await coolifyFetch<void>({ path: `/applications/${uuid}/stop` });
+  },
+
+  async deleteApplication(uuid: string): Promise<void> {
+    await coolifyFetch<void>({
+      path: `/applications/${uuid}`,
+      method: "DELETE",
+      query: { delete_configurations: true, delete_volumes: false, docker_cleanup: true },
+    });
   },
 };

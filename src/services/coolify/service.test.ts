@@ -101,4 +101,66 @@ describe("coolifyService", () => {
     await coolifyService.listServers();
     expect(fetchMock).toHaveBeenCalledWith({ path: "/servers" });
   });
+
+  it("getServer GETs /servers/:uuid", async () => {
+    fetchMock.mockResolvedValue({ uuid: "s1", name: "Server 1", ip: "10.0.0.1", settings: { is_reachable: true } });
+    await coolifyService.getServer("s1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/servers/s1" });
+  });
+
+  it("getProject GETs /projects/:uuid", async () => {
+    fetchMock.mockResolvedValue({ uuid: "p1", name: "Proj", environments: [{ id: 1, uuid: "e1", name: "production" }] });
+    const p = await coolifyService.getProject("p1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/projects/p1" });
+    expect(p.environments?.[0]?.name).toBe("production");
+  });
+
+  it("listServerResources GETs /servers/:uuid/resources", async () => {
+    fetchMock.mockResolvedValue([{ uuid: "a", name: "app" }]);
+    const r = await coolifyService.listServerResources("s1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/servers/s1/resources" });
+    expect(r).toEqual([{ uuid: "a", name: "app" }]);
+  });
+
+  it("listStorages GETs /applications/:uuid/storages and returns the wrapper", async () => {
+    fetchMock.mockResolvedValue({ persistent_storages: [{ name: "data", mount_path: "/data" }], file_storages: [] });
+    const s = await coolifyService.listStorages("a1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/applications/a1/storages" });
+    expect(s.persistent_storages?.[0]?.name).toBe("data");
+  });
+
+  it("getDeployment GETs /deployments/:uuid", async () => {
+    fetchMock.mockResolvedValue({ uuid: "d1", status: "finished" });
+    await coolifyService.getDeployment("d1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/deployments/d1" });
+  });
+
+  it("startApplication hits /applications/:uuid/start", async () => {
+    fetchMock.mockResolvedValue(undefined);
+    await coolifyService.startApplication("a1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/applications/a1/start" });
+  });
+
+  it("stopApplication hits /applications/:uuid/stop", async () => {
+    fetchMock.mockResolvedValue(undefined);
+    await coolifyService.stopApplication("a1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/applications/a1/stop" });
+  });
+
+  it("deleteApplication DELETEs /applications/:uuid with cleanup flags", async () => {
+    fetchMock.mockResolvedValue(undefined);
+    await coolifyService.deleteApplication("a1");
+    expect(fetchMock).toHaveBeenCalledWith({
+      path: "/applications/a1",
+      method: "DELETE",
+      query: { delete_configurations: true, delete_volumes: false, docker_cleanup: true },
+    });
+  });
+
+  it("deploy returns the deployment response", async () => {
+    fetchMock.mockResolvedValue({ deployments: [{ deployment_uuid: "d1" }] });
+    const res = await coolifyService.deploy("a1");
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/deploy", query: { uuid: "a1" } });
+    expect(res.deployments?.[0]?.deployment_uuid).toBe("d1");
+  });
 });
