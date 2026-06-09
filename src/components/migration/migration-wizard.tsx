@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, XCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Info, Loader2, XCircle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -181,12 +181,14 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
           <CardContent className="space-y-2">
             {preview.report.checks.map((c) => (
               <div key={c.key} className="flex items-start gap-2 text-sm">
-                {c.pass ? (
+                {c.advisory ? (
+                  <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                ) : c.pass ? (
                   <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
                 ) : (
                   <XCircle className="mt-0.5 h-4 w-4 text-red-500" />
                 )}
-                <span>
+                <span className={c.advisory ? "text-muted-foreground" : undefined}>
                   <span className="font-medium">{c.label}</span>: {c.detail}
                 </span>
               </div>

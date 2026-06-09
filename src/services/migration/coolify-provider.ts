@@ -138,7 +138,7 @@ export const coolifyPlatformProvider: PlatformProvider = {
     while (Date.now() < deadline) {
       const dep = await coolifyService.getDeployment(deploymentUuid);
       const status = (dep.status ?? "").toLowerCase();
-      if (status.includes("finish") || status === "success" || status === "running") return;
+      if (status.includes("finish") || status === "success") return;
       if (status.includes("fail") || status.includes("error") || status.includes("cancel")) {
         throw new MigrationError(`Coolify deployment ${status || "failed"}.`, "DEPLOY_FAILED");
       }

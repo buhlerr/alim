@@ -7,7 +7,7 @@ import type {
   ResourceInfo,
   ResourceSummary,
 } from "./types";
-import { mockCoolifyProvider } from "./mock-coolify";
+import { coolifyPlatformProvider } from "./coolify-provider";
 
 /**
  * Platform-agnostic orchestration boundary. The engine depends ONLY on this
@@ -30,4 +30,4 @@ export interface PlatformProvider {
 }
 
 /** The active provider for this phase. Swap this line to go live. */
-export const platformProvider: PlatformProvider = mockCoolifyProvider;
+export const platformProvider: PlatformProvider = coolifyPlatformProvider;
