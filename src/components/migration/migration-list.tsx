@@ -16,7 +16,7 @@ export function MigrationList({ jobs }: { jobs: MigrationJobRow[] }) {
   if (jobs.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-        No migrations yet. Start one with "New Migration".
+        No migrations yet. Start one with &ldquo;New Migration&rdquo;.
       </div>
     );
   }

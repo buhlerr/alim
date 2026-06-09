@@ -6,6 +6,7 @@
  * Client-safe: no server-only imports. Icons are Lucide components.
  */
 import {
+  ArrowLeftRight,
   Database,
   LayoutDashboard,
   PlusCircle,
@@ -106,6 +107,16 @@ export const MODULES: AppModule[] = [
     status: "available",
     group: "platform",
     nav: [{ href: "/deploy", label: "Deploy", icon: Rocket }],
+  },
+  {
+    id: "migration",
+    name: "Migrations",
+    description: "Move or clone Coolify resources between servers, with approval-gated cutover.",
+    icon: ArrowLeftRight,
+    href: "/migrations",
+    status: "available",
+    group: "infrastructure",
+    nav: [{ href: "/migrations", label: "Migrations", icon: ArrowLeftRight }],
   },
   {
     id: "secrets",
