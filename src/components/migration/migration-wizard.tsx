@@ -48,9 +48,12 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
   const source = options.resources.find((r) => r.id === sourceResourceId);
   const destinations = options.hosts.filter((h) => h.id !== source?.hostId);
 
+  // Until the user types a custom destination name, it follows the selected
+  // source resource (updating whenever the source changes).
+  const nameTouched = React.useRef(false);
   React.useEffect(() => {
-    if (source && !destinationResourceName) setDestinationResourceName(source.name);
-  }, [source, destinationResourceName]);
+    if (source && !nameTouched.current) setDestinationResourceName(source.name);
+  }, [source]);
 
   async function runValidation() {
     setBusy(true);
@@ -145,7 +148,10 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectContent>
               {destinations.map((h) => (
                 <SelectItem key={h.id} value={h.id}>
-                  {h.name} ({h.capacity.freeMemoryMb} MB RAM, {h.capacity.freeDiskMb} MB disk free)
+                  {h.name}
+                  {h.capacity.metricsAvailable
+                    ? ` (${h.capacity.freeMemoryMb} MB RAM, ${h.capacity.freeDiskMb} MB disk free)`
+                    : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -155,7 +161,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <Input
               id="destName"
               value={destinationResourceName}
-              onChange={(e) => { setDestinationResourceName(e.target.value); setPreview(null); }}
+              onChange={(e) => { nameTouched.current = true; setDestinationResourceName(e.target.value); setPreview(null); }}
             />
           </div>
           <Button
