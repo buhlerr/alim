@@ -2,6 +2,8 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { coolifyService } from "@/services/coolify/service";
 import { CoolifyError } from "@/services/coolify/types";
+import { hostCredentialsService } from "./host-credentials";
+import * as ssh from "./ssh";
 import type { PlatformProvider } from "./provider";
 import { MigrationError } from "./types";
 import type {
@@ -98,6 +100,25 @@ export const coolifyPlatformProvider: PlatformProvider = {
     } catch {
       reachable = false;
     }
+
+    // If a host credential exists, measure real capacity over SSH.
+    // Fall back to zeros + metricsAvailable: false on any failure.
+    try {
+      const cred = await hostCredentialsService.getByServerUuid(hostId);
+      if (cred) {
+        const target = {
+          host: cred.ipAddress,
+          port: cred.sshPort,
+          username: cred.sshUsername,
+          privateKey: cred.privateKey(),
+        };
+        const { freeMemoryMb, freeDiskMb } = await ssh.readCapacity(target);
+        return { hostId, reachable, freeMemoryMb, freeDiskMb, metricsAvailable: true };
+      }
+    } catch {
+      // SSH unavailable or credential missing; fall through to zero metrics.
+    }
+
     return { hostId, reachable, freeMemoryMb: 0, freeDiskMb: 0, metricsAvailable: false };
   },
 

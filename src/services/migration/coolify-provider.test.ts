@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+vi.mock("./host-credentials", () => ({
+  hostCredentialsService: {
+    getByServerUuid: vi.fn().mockResolvedValue(null),
+  },
+}));
+
+vi.mock("./ssh", () => ({
+  readCapacity: vi.fn(),
+}));
+
 vi.mock("@/services/coolify/service", () => ({
   coolifyService: {
     listServers: vi.fn(),
@@ -41,12 +51,18 @@ vi.mock("@/services/coolify/service", () => ({
 }));
 
 import { coolifyService } from "@/services/coolify/service";
+import { hostCredentialsService } from "./host-credentials";
+import * as sshMod from "./ssh";
 import { coolifyPlatformProvider } from "./coolify-provider";
 
 const cs = coolifyService as unknown as Record<string, ReturnType<typeof vi.fn>>;
+const hcs = hostCredentialsService as unknown as Record<string, ReturnType<typeof vi.fn>>;
+const sshFns = sshMod as unknown as Record<string, ReturnType<typeof vi.fn>>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no credential stored -- keeps existing capacity tests green.
+  hcs.getByServerUuid.mockResolvedValue(null);
 });
 
 describe("coolifyPlatformProvider read methods", () => {
@@ -70,6 +86,54 @@ describe("coolifyPlatformProvider read methods", () => {
     const cap = await coolifyPlatformProvider.getHostCapacity("s1");
     expect(cap.reachable).toBe(false);
     expect(cap.metricsAvailable).toBe(false);
+  });
+
+  it("getHostCapacity returns SSH-measured values when a credential exists", async () => {
+    cs.getServer.mockResolvedValue({ uuid: "s1", settings: { is_reachable: true } });
+    hcs.getByServerUuid.mockResolvedValue({
+      ipAddress: "10.0.0.5",
+      sshPort: 22,
+      sshUsername: "root",
+      privateKey: () => "FAKE_KEY",
+    });
+    sshFns.readCapacity.mockResolvedValue({ freeMemoryMb: 2048, freeDiskMb: 10240 });
+
+    const cap = await coolifyPlatformProvider.getHostCapacity("s1");
+
+    expect(sshFns.readCapacity).toHaveBeenCalledWith({
+      host: "10.0.0.5",
+      port: 22,
+      username: "root",
+      privateKey: "FAKE_KEY",
+    });
+    expect(cap).toEqual({
+      hostId: "s1",
+      reachable: true,
+      freeMemoryMb: 2048,
+      freeDiskMb: 10240,
+      metricsAvailable: true,
+    });
+  });
+
+  it("getHostCapacity falls back to zero metrics when ssh.readCapacity throws", async () => {
+    cs.getServer.mockResolvedValue({ uuid: "s1", settings: { is_reachable: true } });
+    hcs.getByServerUuid.mockResolvedValue({
+      ipAddress: "10.0.0.5",
+      sshPort: 22,
+      sshUsername: "root",
+      privateKey: () => "FAKE_KEY",
+    });
+    sshFns.readCapacity.mockRejectedValue(new Error("SSH connection refused"));
+
+    const cap = await coolifyPlatformProvider.getHostCapacity("s1");
+
+    expect(cap).toEqual({
+      hostId: "s1",
+      reachable: true,
+      freeMemoryMb: 0,
+      freeDiskMb: 0,
+      metricsAvailable: false,
+    });
   });
 
   it("listResources returns apps, services, and databases tagged with the correct type", async () => {
