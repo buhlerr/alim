@@ -97,7 +97,7 @@ export function MainNav() {
   const isActive = useIsActive();
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r bg-card md:flex md:flex-col">
+    <aside className="hidden w-60 shrink-0 border-r bg-card md:sticky md:top-0 md:flex md:h-screen md:flex-col md:self-start">
       <Brand />
       <nav className="flex-1 space-y-4 overflow-y-auto p-3">
         {SIDEBAR.map((section, i) => (
