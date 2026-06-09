@@ -1,0 +1,54 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    migrationJob: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    migrationStep: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    migrationLog: { create: vi.fn() },
+    migrationArtifact: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+  },
+}));
+
+import { prisma } from "@/lib/prisma";
+import { migrationStore } from "./store";
+
+const job = prisma.migrationJob as unknown as Record<string, ReturnType<typeof vi.fn>>;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("migrationStore.createJob", () => {
+  it("seeds the steps from the planner for the migration type", async () => {
+    job.create.mockResolvedValue({ id: "job-1" });
+    await migrationStore.createJob({
+      migrationType: "migrate",
+      sourceResourceId: "app-n8n",
+      sourceResourceName: "n8n",
+      destinationResourceName: "n8n",
+      sourceHost: "server-2",
+      sourceHostName: "Server 2",
+      destinationHost: "server-3",
+      destinationHostName: "Server 3",
+      exposure: "internal",
+      npmEnabled: false,
+      cloudflareEnabled: false,
+      sourceResourceSnapshot: { volumes: [] },
+    });
+    const arg = job.create.mock.calls[0][0];
+    expect(arg.data.steps.create.map((s: { key: string }) => s.key)).toEqual([
+      "validate",
+      "stop_source",
+      "archive_volumes",
+      "transfer_volumes",
+      "restore_volumes",
+      "provision",
+      "deploy",
+      "validation_url",
+      "await_approval",
+      "switch_endpoints",
+      "delete_source",
+      "complete",
+    ]);
+  });
+});

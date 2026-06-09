@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
   LayoutDashboard,
   Rocket,
   PlusCircle,
@@ -58,6 +59,7 @@ const SIDEBAR: NavSection[] = [
       { href: "/coolify", label: "Coolify", icon: Cloud },
       { href: "/npm", label: "Proxy Hosts", icon: Network },
       { href: "/cloudflare", label: "Cloudflare", icon: Globe },
+      { href: "/migrations", label: "Migrations", icon: ArrowLeftRight },
     ],
   },
   {
