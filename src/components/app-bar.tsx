@@ -119,8 +119,8 @@ export function AppBar() {
 
   return (
     <header className="sticky top-0 z-40 hidden h-16 items-center gap-6 border-b border-border bg-background/70 px-6 backdrop-blur-md backdrop-saturate-150 md:flex">
-      <div className="bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-transparent">
-        {BRAND.shortName}
+      <div className="whitespace-nowrap bg-gradient-to-r from-[#7a44b7] to-[#ee2f6d] bg-clip-text font-display text-[12px] font-semibold uppercase tracking-[0.2em] text-transparent">
+        {BRAND.appName}
       </div>
 
       <div className="ml-auto flex items-center gap-6 font-mono text-[11px]">
