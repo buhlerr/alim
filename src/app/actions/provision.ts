@@ -60,7 +60,7 @@ export interface TestConnectionResult {
 
 function toMessage(err: unknown): string {
   if (err instanceof ProvisioningError) return err.message;
-  // Generic fallback — never surface raw errors that might leak connection info.
+  // Generic fallback; never surface raw errors that might leak connection info.
   return "Something went wrong while provisioning. Check the server logs.";
 }
 
@@ -130,7 +130,7 @@ export async function createDatabaseAction(
       },
     };
   } catch (err) {
-    // Deliberately do not log `err` verbatim — it may reference credentials.
+    // Deliberately do not log `err` verbatim; it may reference credentials.
     console.error(
       `[provision] failed for ${data.environment}/${data.databaseName}:`,
       err instanceof ProvisioningError ? err.code : "unknown",

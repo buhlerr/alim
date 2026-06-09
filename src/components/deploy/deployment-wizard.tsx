@@ -543,7 +543,7 @@ function StepRow({ step }: { step: DeploymentStepResult }) {
         ) : null}
         {step.secret ? (
           <p className="text-[11px] text-amber-600">
-            Connection string with password — shown once, copy it now.
+            Connection string with password: shown once, copy it now.
           </p>
         ) : null}
       </div>

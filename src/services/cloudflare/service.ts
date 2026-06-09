@@ -49,9 +49,9 @@ function connectionGuidance(err: unknown): string {
   const code = err instanceof CloudflareError ? err.code : undefined;
   switch (code) {
     case "HTTP_400":
-      return "Token not recognized (400) — it looks malformed. Use an API Token (My Profile → API Tokens → Create Token), not your Global API Key or a token ID, and paste it in full.";
+      return "Token not recognized (400): it looks malformed. Use an API Token (My Profile → API Tokens → Create Token), not your Global API Key or a token ID, and paste it in full.";
     case "INVALID_TOKEN":
-      return "Token rejected (401). Make sure you used an API Token (My Profile → API Tokens → Create Token) — not your Global API Key — and copied it in full.";
+      return "Token rejected (401). Make sure you used an API Token (My Profile → API Tokens → Create Token), not your Global API Key, and copied it in full.";
     case "FORBIDDEN":
       return "Token authenticated but lacks permission (403). Add the required Zone/Account permissions to this token.";
     case "ETIMEDOUT":

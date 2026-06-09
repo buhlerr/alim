@@ -234,7 +234,7 @@ export function QueryConsole({
               {environments.map((env) => (
                 <SelectItem key={env.key} value={env.key} disabled={!configured[env.key]}>
                   {env.name}
-                  {!configured[env.key] ? " — not configured" : ""}
+                  {!configured[env.key] ? " (not configured)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -5,7 +5,7 @@ import { NpmError, type NpmToken } from "./types";
 /**
  * NPM JWT acquisition + caching. NPM tokens are short-lived, so we mint one via
  * `POST /api/tokens` and cache it in module memory keyed by base URL + identity,
- * refreshing shortly before expiry. The cache is process-local — fine for a
+ * refreshing shortly before expiry. The cache is process-local, fine for a
  * single-instance admin tool.
  */
 

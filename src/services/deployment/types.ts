@@ -14,7 +14,7 @@ export interface DeploymentStepResult {
   status: StepStatus;
   /** Human-readable success detail (e.g. an app UUID or DNS name). */
   detail?: string;
-  /** Connection string for the database step — shown once, never persisted. */
+  /** Connection string for the database step; shown once, never persisted. */
   secret?: string;
   /** Safe error message when status is "failed". */
   error?: string;

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Displays a DATABASE_URL with a copy button. The password is masked by default
- * and can be revealed. This is only ever rendered immediately after creation —
+ * and can be revealed. This is only ever rendered immediately after creation;
  * the value is never persisted.
  */
 export function ConnectionString({

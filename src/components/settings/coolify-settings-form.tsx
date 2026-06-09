@@ -76,7 +76,7 @@ export function CoolifySettingsForm({
           API token{" "}
           {configured ? (
             <span className="text-xs text-muted-foreground">
-              (a token is saved — enter a new one to replace it)
+              (a token is saved; enter a new one to replace it)
             </span>
           ) : null}
         </Label>

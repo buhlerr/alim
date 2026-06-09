@@ -63,8 +63,8 @@ export default async function SettingsPage() {
           <Layers className="h-4 w-4" /> Environments
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Define the environments your infrastructure uses. Everything else —
-          databases, connections, and modules — is organized by these.
+          Define the environments your infrastructure uses. Everything else
+          (databases, connections, and modules) is organized by these.
         </p>
         <EnvironmentsSection environments={environments} />
       </div>

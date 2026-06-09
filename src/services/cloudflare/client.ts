@@ -8,7 +8,7 @@ export interface CfRequestOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
   /**
-   * Verify a specific token instead of the saved/env credentials — used to test
+   * Verify a specific token instead of the saved/env credentials; used to test
    * a token the user has typed but not yet saved. The token is never persisted.
    */
   tokenOverride?: string;

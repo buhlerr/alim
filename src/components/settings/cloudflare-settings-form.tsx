@@ -67,7 +67,7 @@ export function CloudflareSettingsForm({
           API token{" "}
           {configured ? (
             <span className="text-xs text-muted-foreground">
-              (a token is saved — enter a new one to replace it)
+              (a token is saved; enter a new one to replace it)
             </span>
           ) : null}
         </Label>
@@ -83,7 +83,7 @@ export function CloudflareSettingsForm({
         ) : null}
         <p className="text-xs text-muted-foreground">
           Use an <strong className="font-semibold text-foreground">API Token</strong>{" "}
-          (Cloudflare → My Profile → API Tokens → Create Token) — not your Global
+          (Cloudflare → My Profile → API Tokens → Create Token), not your Global
           API Key.{" "}
           <a
             href="https://dash.cloudflare.com/profile/api-tokens"

@@ -4,7 +4,7 @@ import type { Environment } from "@/lib/targets";
 import type { QueryHistory } from "@prisma/client";
 
 /**
- * Query history — metadata only. Connection strings and passwords are never
+ * Query history: metadata only. Connection strings and passwords are never
  * passed in or stored. The query text itself IS stored for review/re-run.
  */
 export const historyService = {

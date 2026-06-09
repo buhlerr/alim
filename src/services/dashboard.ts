@@ -22,7 +22,7 @@ export interface IntegrationStatus {
 
 /**
  * One integration's status. Skips the network call entirely when unconfigured,
- * and never throws — a failing/slow integration degrades to "unreachable"
+ * and never throws; a failing/slow integration degrades to "unreachable"
  * instead of breaking the dashboard.
  */
 async function status(

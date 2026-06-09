@@ -108,7 +108,7 @@ export function TunnelsTab({ tunnels }: { tunnels: CfTunnel[] }) {
       <Dialog open={Boolean(routesFor)} onOpenChange={(o) => !o && setRoutesFor(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Routes — {routesFor?.name}</DialogTitle>
+            <DialogTitle>Routes: {routesFor?.name}</DialogTitle>
           </DialogHeader>
           {routesFor ? <TunnelRoutes tunnel={routesFor} /> : null}
         </DialogContent>

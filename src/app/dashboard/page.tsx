@@ -32,7 +32,7 @@ import { BRAND } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Fast local reads only — the (possibly slow) integration status calls are
+  // Fast local reads only; the (possibly slow) integration status calls are
   // streamed separately via Suspense so they don't block first paint.
   const [stats, recent, targets, envRows, activity] = await Promise.all([
     registryService.stats(),

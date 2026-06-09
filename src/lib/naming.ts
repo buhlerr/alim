@@ -15,7 +15,7 @@
 /**
  * Normalize an arbitrary application name into a safe PostgreSQL identifier
  * stem: lowercase, non [a-z0-9_] replaced with `_`, leading digits/underscores
- * trimmed, collapsed underscores. May return "" for hopeless input — callers
+ * trimmed, collapsed underscores. May return "" for hopeless input; callers
  * validate the final identifier separately.
  */
 export function sanitizeIdentifier(input: string): string {

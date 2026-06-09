@@ -87,7 +87,7 @@ export default async function CoolifyApplicationPage({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Environment variables</CardTitle>
-          <CardDescription>Values are write-only here — existing values are masked.</CardDescription>
+          <CardDescription>Values are write-only here; existing values are masked.</CardDescription>
         </CardHeader>
         <CardContent>
           <EnvVarsEditor uuid={uuid} initial={envRes.ok ? envRes.data ?? [] : []} />

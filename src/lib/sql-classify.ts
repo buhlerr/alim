@@ -1,5 +1,5 @@
 /**
- * SQL classifier — decides whether a query is read-only or a write/dangerous
+ * SQL classifier: decides whether a query is read-only or a write/dangerous
  * operation. Pure and dependency-free so it runs identically on the client
  * (to drive the confirmation modal) and on the server (authoritative gate).
  *

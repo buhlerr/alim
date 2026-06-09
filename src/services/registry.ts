@@ -4,7 +4,7 @@ import type { Environment } from "@/lib/targets";
 import type { ProvisionedDatabase } from "@prisma/client";
 
 /**
- * Registry service — CRUD over the `provisioned_databases` table.
+ * Registry service: CRUD over the `provisioned_databases` table.
  *
  * Passwords are never accepted or stored here. The registry holds only
  * non-secret metadata.

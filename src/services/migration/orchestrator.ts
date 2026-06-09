@@ -56,7 +56,7 @@ async function handleVolumeStep(
 ): Promise<StepOutcome> {
   const volumes = snapshotOf(job).volumes ?? [];
   if (volumes.length === 0) {
-    return { skipped: true, detail: "No volumes detected — skipped." };
+    return { skipped: true, detail: "No volumes detected; skipped." };
   }
   for (const v of volumes) {
     let ref: string;
