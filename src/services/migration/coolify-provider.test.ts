@@ -199,6 +199,15 @@ describe("coolifyPlatformProvider action methods", () => {
     await expect(coolifyPlatformProvider.deployResource("dest1")).rejects.toThrow(/deploy/i);
   });
 
+  it("deployResource tolerates a transient poll error and keeps polling", async () => {
+    cs.deploy.mockResolvedValue({ deployments: [{ deployment_uuid: "d1" }] });
+    cs.getDeployment
+      .mockRejectedValueOnce(new Error("Timed out reaching the Coolify server."))
+      .mockResolvedValueOnce({ status: "finished" });
+    await coolifyPlatformProvider.deployResource("dest1");
+    expect(cs.getDeployment).toHaveBeenCalledTimes(2);
+  });
+
   it("generateValidationUrl returns the Coolify-assigned fqdn when present", async () => {
     cs.getApplication.mockResolvedValue({ uuid: "dest1", name: "web", fqdn: "https://abc.10.0.0.2.sslip.io" });
     const url = await coolifyPlatformProvider.generateValidationUrl("dest1", "10.0.0.2");

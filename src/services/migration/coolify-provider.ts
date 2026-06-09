@@ -180,8 +180,17 @@ export const coolifyPlatformProvider: PlatformProvider = {
     }
     const deadline = Date.now() + DEPLOY_TIMEOUT_MS;
     while (Date.now() < deadline) {
-      const dep = await coolifyService.getDeployment(deploymentUuid);
-      const status = (dep.status ?? "").toLowerCase();
+      let status = "";
+      try {
+        const dep = await coolifyService.getDeployment(deploymentUuid);
+        status = (dep.status ?? "").toLowerCase();
+      } catch {
+        // Coolify's API can briefly stall while it builds (CPU-bound), causing a
+        // poll to time out. That is not a deployment failure; keep polling until
+        // the deadline rather than aborting a deploy that is still running.
+        await sleep(DEPLOY_POLL_MS);
+        continue;
+      }
       if (status.includes("finish") || status === "success") return;
       if (status.includes("fail") || status.includes("error") || status.includes("cancel")) {
         throw new MigrationError(`Coolify deployment ${status || "failed"}.`, "DEPLOY_FAILED");
