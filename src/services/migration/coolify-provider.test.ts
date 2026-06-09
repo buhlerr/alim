@@ -22,6 +22,21 @@ vi.mock("@/services/coolify/service", () => ({
     startApplication: vi.fn(),
     stopApplication: vi.fn(),
     deleteApplication: vi.fn(),
+    // Service methods
+    listServices: vi.fn(),
+    getService: vi.fn(),
+    listServiceEnvs: vi.fn(),
+    listServiceStorages: vi.fn(),
+    createService: vi.fn(),
+    startService: vi.fn(),
+    stopService: vi.fn(),
+    deleteService: vi.fn(),
+    // Database methods
+    listDatabases: vi.fn(),
+    getDatabase: vi.fn(),
+    startDatabase: vi.fn(),
+    stopDatabase: vi.fn(),
+    deleteDatabase: vi.fn(),
   },
 }));
 
@@ -57,15 +72,23 @@ describe("coolifyPlatformProvider read methods", () => {
     expect(cap.metricsAvailable).toBe(false);
   });
 
-  it("listResources maps apps with server from destination.server", async () => {
+  it("listResources returns apps, services, and databases tagged with the correct type", async () => {
     cs.listApplications.mockResolvedValue([
       { uuid: "a1", name: "web", fqdn: "web.example.com",
         destination: { server: { uuid: "s1", name: "Server 1", ip: "10.0.0.1" } } },
     ]);
+    cs.listServices.mockResolvedValue([
+      { uuid: "svc1", name: "my-stack", server: { uuid: "s1", name: "Server 1" }, environment_id: 5 },
+    ]);
+    cs.listDatabases.mockResolvedValue([
+      { uuid: "db1", name: "postgres", database_type: "standalone-postgresql",
+        destination: { server: { uuid: "s1", name: "Server 1" } } },
+    ]);
     const res = await coolifyPlatformProvider.listResources();
-    expect(res[0]).toMatchObject({
-      id: "a1", name: "web", hostId: "s1", hostName: "Server 1", domains: ["web.example.com"],
-    });
+    expect(res).toHaveLength(3);
+    expect(res[0]).toMatchObject({ id: "a1", name: "web", type: "application", hostId: "s1", hostName: "Server 1", domains: ["web.example.com"] });
+    expect(res[1]).toMatchObject({ id: "svc1", name: "my-stack", type: "service", hostId: "s1", hostName: "Server 1", domains: [] });
+    expect(res[2]).toMatchObject({ id: "db1", name: "postgres", type: "database", hostId: "s1", hostName: "Server 1", domains: [] });
   });
 
   it("inspectResource composes app + envs + persistent storages + resolved project/env", async () => {
@@ -109,6 +132,52 @@ describe("coolifyPlatformProvider read methods", () => {
     cs.listServerResources.mockResolvedValue([{ uuid: "a1", name: "web" }]);
     expect(await coolifyPlatformProvider.resourceExistsOnHost("s1", "web")).toBe(true);
     expect(await coolifyPlatformProvider.resourceExistsOnHost("s1", "other")).toBe(false);
+  });
+
+  it("inspectResource returns service info when id belongs to a service", async () => {
+    const { CoolifyError } = await import("@/services/coolify/types");
+    cs.getApplication.mockRejectedValue(new CoolifyError("not found", "HTTP_404"));
+    cs.getService.mockResolvedValue({
+      uuid: "svc1", name: "my-stack", environment_id: 5,
+      docker_compose_raw: "services:\n  web:\n    image: nginx\n",
+      server: { uuid: "s1", name: "Server 1" },
+    });
+    cs.listServiceEnvs.mockResolvedValue([{ key: "MODE", value: "prod" }]);
+    cs.listServiceStorages.mockResolvedValue({ persistent_storages: [], file_storages: [] });
+    cs.listProjects.mockResolvedValue([{ uuid: "p1", name: "Proj" }]);
+    cs.getProject.mockResolvedValue({ uuid: "p1", name: "Proj", environments: [{ id: 5, uuid: "e1", name: "production" }] });
+
+    const info = await coolifyPlatformProvider.inspectResource("svc1");
+    expect(info.type).toBe("service");
+    expect(info.id).toBe("svc1");
+    expect(info.hostId).toBe("s1");
+    expect(info.hostName).toBe("Server 1");
+    expect(info.envVars).toEqual([{ key: "MODE", value: "prod" }]);
+    expect(info.buildConfig).toMatchObject({
+      docker_compose_raw: "services:\n  web:\n    image: nginx\n",
+      project_uuid: "p1",
+      environment_name: "production",
+    });
+  });
+
+  it("inspectResource returns database info when id belongs to a database", async () => {
+    const { CoolifyError } = await import("@/services/coolify/types");
+    cs.getApplication.mockRejectedValue(new CoolifyError("not found", "HTTP_404"));
+    cs.getService.mockRejectedValue(new CoolifyError("not found", "HTTP_404"));
+    cs.getDatabase.mockResolvedValue({
+      uuid: "db1", name: "postgres", database_type: "standalone-postgresql",
+      environment_id: 5,
+      destination: { server: { uuid: "s1", name: "Server 1" } },
+    });
+    cs.listProjects.mockResolvedValue([{ uuid: "p1", name: "Proj" }]);
+    cs.getProject.mockResolvedValue({ uuid: "p1", name: "Proj", environments: [{ id: 5, uuid: "e1", name: "production" }] });
+
+    const info = await coolifyPlatformProvider.inspectResource("db1");
+    expect(info.type).toBe("database");
+    expect(info.id).toBe("db1");
+    expect(info.hostId).toBe("s1");
+    expect(info.buildConfig).toMatchObject({ database_type: "standalone-postgresql" });
+    expect(info.envVars).toEqual([]);
   });
 });
 
@@ -327,7 +396,8 @@ describe("coolifyPlatformProvider action methods", () => {
     expect(url).toBe("https://abc.10.0.0.2.sslip.io");
   });
 
-  it("stop/start/delete delegate to the service", async () => {
+  it("stop/start/delete delegate to the application service when the id is an application", async () => {
+    cs.getApplication.mockResolvedValue({ uuid: "a1", name: "web" });
     cs.stopApplication.mockResolvedValue(undefined);
     cs.startApplication.mockResolvedValue(undefined);
     cs.deleteApplication.mockResolvedValue(undefined);
@@ -337,6 +407,65 @@ describe("coolifyPlatformProvider action methods", () => {
     expect(cs.stopApplication).toHaveBeenCalledWith("a1");
     expect(cs.startApplication).toHaveBeenCalledWith("a1");
     expect(cs.deleteApplication).toHaveBeenCalledWith("a1");
+  });
+
+  it("stop/start/delete delegate to the service methods when the id is a service", async () => {
+    const { CoolifyError } = await import("@/services/coolify/types");
+    cs.getApplication.mockRejectedValue(new CoolifyError("not found", "HTTP_404"));
+    cs.getService.mockResolvedValue({ uuid: "svc1", name: "my-stack" });
+    cs.stopService.mockResolvedValue(undefined);
+    cs.startService.mockResolvedValue(undefined);
+    cs.deleteService.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.stopResource("svc1");
+    await coolifyPlatformProvider.startResource("svc1");
+    await coolifyPlatformProvider.deleteResource("svc1");
+    expect(cs.stopService).toHaveBeenCalledWith("svc1");
+    expect(cs.startService).toHaveBeenCalledWith("svc1");
+    expect(cs.deleteService).toHaveBeenCalledWith("svc1");
+    expect(cs.stopApplication).not.toHaveBeenCalled();
+  });
+
+  it("createResource for a service base64-encodes the compose and posts to /services", async () => {
+    const serviceSnapshot = {
+      id: "svc1", name: "my-stack", environment: "production",
+      hostId: "s1", hostName: "Server 1", domains: [],
+      type: "service",
+      envVars: [{ key: "MODE", value: "prod" }],
+      buildConfig: {
+        docker_compose_raw: "services:\n  web:\n    image: nginx\n",
+        project_uuid: "p1",
+        environment_name: "production",
+      },
+      volumes: [],
+    };
+    cs.createService.mockResolvedValue({ uuid: "svc-dest1", domains: [] });
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    const res = await coolifyPlatformProvider.createResource({
+      name: "my-stack-copy", destinationHostId: "s2", snapshot: serviceSnapshot as any,
+    });
+    expect(res).toEqual({ resourceId: "svc-dest1" });
+    expect(cs.createService).toHaveBeenCalledWith({
+      project_uuid: "p1",
+      server_uuid: "s2",
+      environment_name: "production",
+      name: "my-stack-copy",
+      docker_compose_raw: Buffer.from("services:\n  web:\n    image: nginx\n").toString("base64"),
+    });
+    expect(cs.setEnvVarsBulk).toHaveBeenCalledWith("svc-dest1", [{ key: "MODE", value: "prod" }]);
+  });
+
+  it("createResource for a database throws with a clear error", async () => {
+    const dbSnapshot = {
+      id: "db1", name: "postgres", environment: "production",
+      hostId: "s1", hostName: "Server 1", domains: [],
+      type: "database",
+      envVars: [],
+      buildConfig: { database_type: "standalone-postgresql" },
+      volumes: [],
+    };
+    await expect(coolifyPlatformProvider.createResource({
+      name: "pg-copy", destinationHostId: "s2", snapshot: dbSnapshot as any,
+    })).rejects.toThrow(/Phase F/i);
   });
 
   it("switchEndpoints clears source domains, sets destination domains, and redeploys", async () => {

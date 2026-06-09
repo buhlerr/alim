@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { coolifyService } from "@/services/coolify/service";
+import { CoolifyError } from "@/services/coolify/types";
 import type { PlatformProvider } from "./provider";
 import { MigrationError } from "./types";
 import type {
@@ -12,6 +13,7 @@ import type {
   SwitchEndpointsInput,
   VolumeInfo,
 } from "./types";
+import type { ResourceType } from "@/lib/migration";
 
 const DEPLOY_TIMEOUT_MS = 10 * 60 * 1000;
 const DEPLOY_POLL_MS = 2_000;
@@ -38,6 +40,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function is404(err: unknown): boolean {
+  return err instanceof CoolifyError && err.code === "HTTP_404";
+}
+
 /** Resolve an app's integer environment_id to its project uuid + environment name. */
 async function resolveProjectEnv(
   environmentId: number | null | undefined,
@@ -50,6 +56,32 @@ async function resolveProjectEnv(
     if (env) return { projectUuid: p.uuid, environmentName: env.name };
   }
   return { projectUuid: "", environmentName: "" };
+}
+
+/**
+ * Resolve the resource type by probing the Coolify API: application first
+ * (most common), then service, then database. Returns null when not found.
+ */
+async function resolveResourceType(id: string): Promise<ResourceType | null> {
+  try {
+    await coolifyService.getApplication(id);
+    return "application";
+  } catch (err) {
+    if (!is404(err)) throw err;
+  }
+  try {
+    await coolifyService.getService(id);
+    return "service";
+  } catch (err) {
+    if (!is404(err)) throw err;
+  }
+  try {
+    await coolifyService.getDatabase(id);
+    return "database";
+  } catch (err) {
+    if (!is404(err)) throw err;
+  }
+  return null;
 }
 
 export const coolifyPlatformProvider: PlatformProvider = {
@@ -70,66 +102,62 @@ export const coolifyPlatformProvider: PlatformProvider = {
   },
 
   async listResources(): Promise<ResourceSummary[]> {
-    const apps = await coolifyService.listApplications();
-    return apps.map((a) => ({
+    const [apps, services, databases] = await Promise.all([
+      coolifyService.listApplications(),
+      coolifyService.listServices(),
+      coolifyService.listDatabases(),
+    ]);
+
+    const appSummaries: ResourceSummary[] = apps.map((a) => ({
       id: a.uuid,
       name: a.name,
+      type: "application" as ResourceType,
       environment: "",
       hostId: a.destination?.server?.uuid ?? "",
       hostName: a.destination?.server?.name ?? "",
       domains: splitDomains(a.fqdn),
     }));
+
+    const serviceSummaries: ResourceSummary[] = services.map((s) => ({
+      id: s.uuid,
+      name: s.name,
+      type: "service" as ResourceType,
+      environment: "",
+      // Services expose server at the top level (no destination wrapper)
+      hostId: s.server?.uuid ?? "",
+      hostName: s.server?.name ?? "",
+      domains: [],
+    }));
+
+    const dbSummaries: ResourceSummary[] = databases.map((d) => ({
+      id: d.uuid,
+      name: d.name,
+      type: "database" as ResourceType,
+      environment: "",
+      hostId: d.destination?.server?.uuid ?? "",
+      hostName: d.destination?.server?.name ?? "",
+      domains: [],
+    }));
+
+    return [...appSummaries, ...serviceSummaries, ...dbSummaries];
   },
 
   async inspectResource(id: string): Promise<ResourceInfo> {
-    const app = await coolifyService.getApplication(id);
-    const [envs, storagesResp] = await Promise.all([
-      coolifyService.listEnvVars(id),
-      coolifyService.listStorages(id).catch(() => ({})),
-    ]);
-    const { projectUuid, environmentName } = await resolveProjectEnv(app.environment_id);
-    const persistent = (storagesResp as { persistent_storages?: Array<{ name: string; mount_path?: string | null }> }).persistent_storages ?? [];
-    const volumes: VolumeInfo[] = persistent.map((s) => ({ name: s.name, estimatedSizeMb: 0 }));
-    return {
-      id: app.uuid,
-      name: app.name,
-      environment: environmentName,
-      hostId: app.destination?.server?.uuid ?? "",
-      hostName: app.destination?.server?.name ?? "",
-      domains: splitDomains(app.fqdn),
-      type: "application",
-      envVars: envs.map((e) => ({ key: e.key, value: e.value })),
-      buildConfig: {
-        git_repository: app.git_repository ?? "",
-        git_branch: app.git_branch ?? "main",
-        build_pack: app.build_pack ?? "nixpacks",
-        ports_exposes: app.ports_exposes ?? "3000",
-        project_uuid: projectUuid,
-        environment_name: environmentName,
-        // Git source binding, so a private-repo app is recreated via its
-        // GitHub App rather than the public-repo endpoint (which lacks auth).
-        source_id: app.source_id ?? null,
-        source_type: app.source_type ?? "",
-        // Build configuration replicated via PATCH after the destination is
-        // created (the create endpoints do not accept these).
-        install_command: app.install_command ?? null,
-        build_command: app.build_command ?? null,
-        start_command: app.start_command ?? null,
-        base_directory: app.base_directory ?? null,
-        publish_directory: app.publish_directory ?? null,
-        // Additional config live-verified as accepted by PATCH.
-        health_check_enabled: app.health_check_enabled ?? null,
-        health_check_path: app.health_check_path ?? null,
-        ports_mappings: app.ports_mappings ?? null,
-        limits_memory: app.limits_memory ?? null,
-        limits_cpus: app.limits_cpus ?? null,
-        pre_deployment_command: app.pre_deployment_command ?? null,
-        post_deployment_command: app.post_deployment_command ?? null,
-        custom_docker_run_options: app.custom_docker_run_options ?? null,
-        static_image: app.static_image ?? null,
-      },
-      volumes,
-    };
+    const resourceType = await resolveResourceType(id);
+
+    if (resourceType === "application") {
+      return inspectApplication(id);
+    }
+    if (resourceType === "service") {
+      return inspectService(id);
+    }
+    if (resourceType === "database") {
+      return inspectDatabase(id);
+    }
+    throw new MigrationError(
+      `Resource ${id} was not found as an application, service, or database.`,
+      "NOT_FOUND",
+    );
   },
 
   async resourceExistsOnHost(hostId: string, name: string): Promise<boolean> {
@@ -138,87 +166,19 @@ export const coolifyPlatformProvider: PlatformProvider = {
   },
 
   async createResource(spec: CreateResourceSpec): Promise<{ resourceId: string }> {
-    const cfg = spec.snapshot.buildConfig as Record<string, unknown>;
-    const projectUuid = String(cfg.project_uuid ?? "");
-    if (!projectUuid) {
-      throw new MigrationError(
-        "Cannot infer the destination project for this resource. (Explicit targeting arrives in Phase C.)",
-        "INFER_FAILED",
-      );
+    const type = spec.snapshot.type;
+    if (type === "application") {
+      return createApplication(spec);
     }
-    const gitRepo = String(cfg.git_repository ?? "");
-    const sourceId = typeof cfg.source_id === "number" ? cfg.source_id : null;
-    const sourceType = String(cfg.source_type ?? "");
-    const common = {
-      project_uuid: projectUuid,
-      server_uuid: spec.destinationHostId,
-      environment_name: String(cfg.environment_name || "production"),
-      git_branch: String(cfg.git_branch || "main"),
-      build_pack: String(cfg.build_pack || "nixpacks"),
-      ports_exposes: String(cfg.ports_exposes || "3000"),
-      name: spec.name,
-    };
-
-    // A private repo deployed through a Coolify GitHub App must be recreated via
-    // that app (it carries the git auth). The public-repo endpoint cannot clone
-    // a private repo. Fall back to the public path otherwise.
-    let created: { uuid: string } | null = null;
-    if (/GithubApp/i.test(sourceType) && sourceId != null) {
-      const apps = await coolifyService.listGithubApps();
-      const ghApp = apps.find((a) => a.id === sourceId);
-      if (ghApp && !ghApp.is_public) {
-        created = await coolifyService.createApplicationPrivateGithubApp({
-          ...common,
-          github_app_uuid: ghApp.uuid,
-          git_repository: gitRepo,
-        });
-      }
+    if (type === "service") {
+      return createService(spec);
     }
-    if (!created) {
-      created = await coolifyService.createApplication({
-        ...common,
-        git_repository: toGitUrl(gitRepo),
-      });
-    }
-
-    // Replicate build configuration the create endpoints do not accept. Only
-    // send fields that are actually set on the source so we never clobber a
-    // default with an empty/null value.
-    const buildPatch: Record<string, string | boolean> = {};
-
-    // String fields: replicate when non-empty.
-    for (const field of [
-      "install_command",
-      "build_command",
-      "start_command",
-      "base_directory",
-      "publish_directory",
-      "health_check_path",
-      "ports_mappings",
-      "limits_memory",
-      "limits_cpus",
-      "pre_deployment_command",
-      "post_deployment_command",
-      "custom_docker_run_options",
-      "static_image",
-    ] as const) {
-      const value = cfg[field];
-      if (typeof value === "string" && value.length > 0) buildPatch[field] = value;
-    }
-
-    // Boolean fields: replicate whenever explicitly set (not null).
-    const hce = cfg["health_check_enabled"];
-    if (typeof hce === "boolean") buildPatch["health_check_enabled"] = hce;
-
-    if (Object.keys(buildPatch).length > 0) {
-      await coolifyService.updateApplication(created.uuid, buildPatch);
-    }
-
-    if (spec.snapshot.envVars.length > 0) {
-      // Bulk upsert: POST /envs 409s on keys Coolify auto-creates on the new app.
-      await coolifyService.setEnvVarsBulk(created.uuid, spec.snapshot.envVars);
-    }
-    return { resourceId: created.uuid };
+    // Databases contain stateful data in volumes; migrating the config without
+    // the data would leave the destination broken. Deferred to Phase F.
+    throw new MigrationError(
+      "Database migration requires volume transfer (Phase F); not yet supported.",
+      "DB_MIGRATION_UNSUPPORTED",
+    );
   },
 
   async deployResource(id: string): Promise<void> {
@@ -261,11 +221,25 @@ export const coolifyPlatformProvider: PlatformProvider = {
   },
 
   async stopResource(id: string): Promise<void> {
-    await coolifyService.stopApplication(id);
+    const type = await resolveResourceType(id);
+    if (type === "service") {
+      await coolifyService.stopService(id);
+    } else if (type === "database") {
+      await coolifyService.stopDatabase(id);
+    } else {
+      await coolifyService.stopApplication(id);
+    }
   },
 
   async startResource(id: string): Promise<void> {
-    await coolifyService.startApplication(id);
+    const type = await resolveResourceType(id);
+    if (type === "service") {
+      await coolifyService.startService(id);
+    } else if (type === "database") {
+      await coolifyService.startDatabase(id);
+    } else {
+      await coolifyService.startApplication(id);
+    }
   },
 
   async switchEndpoints({ sourceResourceId, destinationResourceId, domains }: SwitchEndpointsInput): Promise<void> {
@@ -278,6 +252,216 @@ export const coolifyPlatformProvider: PlatformProvider = {
   },
 
   async deleteResource(id: string): Promise<void> {
-    await coolifyService.deleteApplication(id);
+    const type = await resolveResourceType(id);
+    if (type === "service") {
+      await coolifyService.deleteService(id);
+    } else if (type === "database") {
+      await coolifyService.deleteDatabase(id);
+    } else {
+      await coolifyService.deleteApplication(id);
+    }
   },
 };
+
+// ── Private per-type inspect helpers ──────────────────────────────────────────
+
+async function inspectApplication(id: string): Promise<ResourceInfo> {
+  const app = await coolifyService.getApplication(id);
+  const [envs, storagesResp] = await Promise.all([
+    coolifyService.listEnvVars(id),
+    coolifyService.listStorages(id).catch(() => ({})),
+  ]);
+  const { projectUuid, environmentName } = await resolveProjectEnv(app.environment_id);
+  const persistent = (storagesResp as { persistent_storages?: Array<{ name: string; mount_path?: string | null }> }).persistent_storages ?? [];
+  const volumes: VolumeInfo[] = persistent.map((s) => ({ name: s.name, estimatedSizeMb: 0 }));
+  return {
+    id: app.uuid,
+    name: app.name,
+    type: "application",
+    environment: environmentName,
+    hostId: app.destination?.server?.uuid ?? "",
+    hostName: app.destination?.server?.name ?? "",
+    domains: splitDomains(app.fqdn),
+    envVars: envs.map((e) => ({ key: e.key, value: e.value })),
+    buildConfig: {
+      git_repository: app.git_repository ?? "",
+      git_branch: app.git_branch ?? "main",
+      build_pack: app.build_pack ?? "nixpacks",
+      ports_exposes: app.ports_exposes ?? "3000",
+      project_uuid: projectUuid,
+      environment_name: environmentName,
+      source_id: app.source_id ?? null,
+      source_type: app.source_type ?? "",
+      install_command: app.install_command ?? null,
+      build_command: app.build_command ?? null,
+      start_command: app.start_command ?? null,
+      base_directory: app.base_directory ?? null,
+      publish_directory: app.publish_directory ?? null,
+      health_check_enabled: app.health_check_enabled ?? null,
+      health_check_path: app.health_check_path ?? null,
+      ports_mappings: app.ports_mappings ?? null,
+      limits_memory: app.limits_memory ?? null,
+      limits_cpus: app.limits_cpus ?? null,
+      pre_deployment_command: app.pre_deployment_command ?? null,
+      post_deployment_command: app.post_deployment_command ?? null,
+      custom_docker_run_options: app.custom_docker_run_options ?? null,
+      static_image: app.static_image ?? null,
+    },
+    volumes,
+  };
+}
+
+async function inspectService(id: string): Promise<ResourceInfo> {
+  const svc = await coolifyService.getService(id);
+  const [envs, storagesResp] = await Promise.all([
+    coolifyService.listServiceEnvs(id).catch(() => [] as Array<{ key: string; value: string }>),
+    coolifyService.listServiceStorages(id).catch(() => ({})),
+  ]);
+  const { projectUuid, environmentName } = await resolveProjectEnv(svc.environment_id);
+  const persistent = (storagesResp as { persistent_storages?: Array<{ name: string; mount_path?: string | null }> }).persistent_storages ?? [];
+  const volumes: VolumeInfo[] = persistent.map((s) => ({ name: s.name, estimatedSizeMb: 0 }));
+  return {
+    id: svc.uuid,
+    name: svc.name,
+    type: "service",
+    environment: environmentName,
+    // Services expose server at top level, not in a destination wrapper
+    hostId: svc.server?.uuid ?? "",
+    hostName: svc.server?.name ?? "",
+    domains: [],
+    envVars: envs.map((e) => ({ key: e.key, value: e.value })),
+    buildConfig: {
+      docker_compose_raw: svc.docker_compose_raw ?? "",
+      project_uuid: projectUuid,
+      environment_name: environmentName,
+    },
+    volumes,
+  };
+}
+
+async function inspectDatabase(id: string): Promise<ResourceInfo> {
+  const db = await coolifyService.getDatabase(id);
+  const { environmentName } = await resolveProjectEnv(db.environment_id);
+  return {
+    id: db.uuid,
+    name: db.name,
+    type: "database",
+    environment: environmentName,
+    hostId: db.destination?.server?.uuid ?? "",
+    hostName: db.destination?.server?.name ?? "",
+    domains: [],
+    envVars: [],
+    buildConfig: {
+      database_type: db.database_type ?? "",
+    },
+    volumes: [],
+  };
+}
+
+// ── Private per-type create helpers ───────────────────────────────────────────
+
+async function createApplication(spec: CreateResourceSpec): Promise<{ resourceId: string }> {
+  const cfg = spec.snapshot.buildConfig as Record<string, unknown>;
+  const projectUuid = String(cfg.project_uuid ?? "");
+  if (!projectUuid) {
+    throw new MigrationError(
+      "Cannot infer the destination project for this resource. (Explicit targeting arrives in Phase C.)",
+      "INFER_FAILED",
+    );
+  }
+  const gitRepo = String(cfg.git_repository ?? "");
+  const sourceId = typeof cfg.source_id === "number" ? cfg.source_id : null;
+  const sourceType = String(cfg.source_type ?? "");
+  const common = {
+    project_uuid: projectUuid,
+    server_uuid: spec.destinationHostId,
+    environment_name: String(cfg.environment_name || "production"),
+    git_branch: String(cfg.git_branch || "main"),
+    build_pack: String(cfg.build_pack || "nixpacks"),
+    ports_exposes: String(cfg.ports_exposes || "3000"),
+    name: spec.name,
+  };
+
+  let created: { uuid: string } | null = null;
+  if (/GithubApp/i.test(sourceType) && sourceId != null) {
+    const apps = await coolifyService.listGithubApps();
+    const ghApp = apps.find((a) => a.id === sourceId);
+    if (ghApp && !ghApp.is_public) {
+      created = await coolifyService.createApplicationPrivateGithubApp({
+        ...common,
+        github_app_uuid: ghApp.uuid,
+        git_repository: gitRepo,
+      });
+    }
+  }
+  if (!created) {
+    created = await coolifyService.createApplication({
+      ...common,
+      git_repository: toGitUrl(gitRepo),
+    });
+  }
+
+  const buildPatch: Record<string, string | boolean> = {};
+  for (const field of [
+    "install_command",
+    "build_command",
+    "start_command",
+    "base_directory",
+    "publish_directory",
+    "health_check_path",
+    "ports_mappings",
+    "limits_memory",
+    "limits_cpus",
+    "pre_deployment_command",
+    "post_deployment_command",
+    "custom_docker_run_options",
+    "static_image",
+  ] as const) {
+    const value = cfg[field];
+    if (typeof value === "string" && value.length > 0) buildPatch[field] = value;
+  }
+  const hce = cfg["health_check_enabled"];
+  if (typeof hce === "boolean") buildPatch["health_check_enabled"] = hce;
+
+  if (Object.keys(buildPatch).length > 0) {
+    await coolifyService.updateApplication(created.uuid, buildPatch);
+  }
+
+  if (spec.snapshot.envVars.length > 0) {
+    await coolifyService.setEnvVarsBulk(created.uuid, spec.snapshot.envVars);
+  }
+  return { resourceId: created.uuid };
+}
+
+async function createService(spec: CreateResourceSpec): Promise<{ resourceId: string }> {
+  const cfg = spec.snapshot.buildConfig as Record<string, unknown>;
+  const projectUuid = String(cfg.project_uuid ?? "");
+  if (!projectUuid) {
+    throw new MigrationError(
+      "Cannot infer the destination project for this service. (Explicit targeting arrives in Phase C.)",
+      "INFER_FAILED",
+    );
+  }
+  const composeRaw = String(cfg.docker_compose_raw ?? "");
+  if (!composeRaw) {
+    throw new MigrationError(
+      "Service snapshot is missing docker_compose_raw; cannot recreate.",
+      "MISSING_COMPOSE",
+    );
+  }
+
+  const created = await coolifyService.createService({
+    project_uuid: projectUuid,
+    server_uuid: spec.destinationHostId,
+    environment_name: String(cfg.environment_name || "production"),
+    name: spec.name,
+    // POST /services requires docker_compose_raw to be base64-encoded (confirmed live)
+    docker_compose_raw: Buffer.from(composeRaw).toString("base64"),
+  });
+
+  // Replicate env vars via bulk-upsert on the new service
+  if (spec.snapshot.envVars.length > 0) {
+    await coolifyService.setEnvVarsBulk(created.uuid, spec.snapshot.envVars);
+  }
+  return { resourceId: created.uuid };
+}

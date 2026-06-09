@@ -4,6 +4,9 @@
  * these freely.
  */
 
+export type ResourceType = "application" | "service" | "database";
+export const RESOURCE_TYPES: ResourceType[] = ["application", "service", "database"];
+
 export type MigrationType = "clone" | "migrate";
 export const MIGRATION_TYPES: MigrationType[] = ["clone", "migrate"];
 

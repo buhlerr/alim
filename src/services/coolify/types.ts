@@ -187,3 +187,50 @@ export interface CoolifyConnectionResult {
   message: string;
   version?: string;
 }
+
+/**
+ * A Coolify docker-compose service (GET /services).
+ * Note: server lives at the top-level `server` field, not in a `destination`
+ * wrapper (unlike applications). `docker_compose_raw` is plain YAML when
+ * reading; POST /services requires it base64-encoded.
+ */
+export interface CoolifyService {
+  uuid: string;
+  name: string;
+  status?: string;
+  environment_id?: number | null;
+  /** Plain YAML compose content when reading. */
+  docker_compose_raw?: string | null;
+  /** Top-level server object (no destination wrapper). */
+  server?: CoolifyServer | null;
+  description?: string | null;
+  service_type?: string | null;
+}
+
+export interface CoolifyDatabase {
+  uuid: string;
+  name: string;
+  /** e.g. "standalone-postgresql", "standalone-mysql", "standalone-redis" */
+  database_type?: string | null;
+  status?: string;
+  environment_id?: number | null;
+  /** Server lives inside destination, matching the application pattern. */
+  destination?: CoolifyDestination | null;
+  description?: string | null;
+}
+
+/** POST /services request. docker_compose_raw must be base64-encoded. */
+export interface CreateServiceRequest {
+  project_uuid: string;
+  server_uuid: string;
+  environment_name: string;
+  name: string;
+  /** Must be base64-encoded YAML. */
+  docker_compose_raw: string;
+}
+
+/** POST /services response -- minimal shape confirmed live. */
+export interface CreateServiceResponse {
+  uuid: string;
+  domains?: string[];
+}

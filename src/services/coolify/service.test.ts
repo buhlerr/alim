@@ -184,4 +184,105 @@ describe("coolifyService", () => {
       body: req,
     });
   });
+
+  describe("service methods", () => {
+    it("listServices GETs /services", async () => {
+      fetchMock.mockResolvedValue([{ uuid: "s1", name: "my-service" }]);
+      const result = await coolifyService.listServices();
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services" });
+      expect(result).toEqual([{ uuid: "s1", name: "my-service" }]);
+    });
+
+    it("getService GETs /services/:uuid", async () => {
+      fetchMock.mockResolvedValue({ uuid: "s1", name: "my-service", docker_compose_raw: "services:\n  web:\n    image: nginx\n" });
+      await coolifyService.getService("s1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services/s1" });
+    });
+
+    it("listServiceEnvs GETs /services/:uuid/envs", async () => {
+      fetchMock.mockResolvedValue([{ key: "NODE_ENV", value: "production" }]);
+      await coolifyService.listServiceEnvs("s1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services/s1/envs" });
+    });
+
+    it("listServiceStorages GETs /services/:uuid/storages", async () => {
+      fetchMock.mockResolvedValue({ persistent_storages: [{ name: "data", mount_path: "/data" }], file_storages: [] });
+      const result = await coolifyService.listServiceStorages("s1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services/s1/storages" });
+      expect(result.persistent_storages?.[0]?.name).toBe("data");
+    });
+
+    it("createService POSTs to /services with the body (docker_compose_raw must be base64)", async () => {
+      fetchMock.mockResolvedValue({ uuid: "s-new", domains: [] });
+      const req = {
+        project_uuid: "p1",
+        server_uuid: "srv1",
+        environment_name: "production",
+        name: "my-stack",
+        docker_compose_raw: Buffer.from("services:\n  web:\n    image: nginx\n").toString("base64"),
+      };
+      const result = await coolifyService.createService(req);
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services", method: "POST", body: req });
+      expect(result).toEqual({ uuid: "s-new", domains: [] });
+    });
+
+    it("startService hits /services/:uuid/start", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.startService("s1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services/s1/start" });
+    });
+
+    it("stopService hits /services/:uuid/stop", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.stopService("s1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/services/s1/stop" });
+    });
+
+    it("deleteService DELETEs /services/:uuid with cleanup flags", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.deleteService("s1");
+      expect(fetchMock).toHaveBeenCalledWith({
+        path: "/services/s1",
+        method: "DELETE",
+        query: { delete_configurations: true, delete_volumes: false },
+      });
+    });
+  });
+
+  describe("database methods", () => {
+    it("listDatabases GETs /databases", async () => {
+      fetchMock.mockResolvedValue([{ uuid: "db1", name: "pg", database_type: "standalone-postgresql" }]);
+      const result = await coolifyService.listDatabases();
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/databases" });
+      expect(result[0]?.database_type).toBe("standalone-postgresql");
+    });
+
+    it("getDatabase GETs /databases/:uuid", async () => {
+      fetchMock.mockResolvedValue({ uuid: "db1", name: "pg", database_type: "standalone-postgresql" });
+      await coolifyService.getDatabase("db1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/databases/db1" });
+    });
+
+    it("startDatabase hits /databases/:uuid/start", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.startDatabase("db1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/databases/db1/start" });
+    });
+
+    it("stopDatabase hits /databases/:uuid/stop", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.stopDatabase("db1");
+      expect(fetchMock).toHaveBeenCalledWith({ path: "/databases/db1/stop" });
+    });
+
+    it("deleteDatabase DELETEs /databases/:uuid with cleanup flags", async () => {
+      fetchMock.mockResolvedValue(undefined);
+      await coolifyService.deleteDatabase("db1");
+      expect(fetchMock).toHaveBeenCalledWith({
+        path: "/databases/db1",
+        method: "DELETE",
+        query: { delete_configurations: true, delete_volumes: false },
+      });
+    });
+  });
 });
