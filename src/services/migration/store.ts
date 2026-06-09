@@ -7,7 +7,7 @@ import type {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { buildPlan } from "./planner";
+import { buildPlan, stepJobStatus } from "./planner";
 import type { Exposure, LogLevel, MigrationType } from "@/lib/migration";
 
 export type {
@@ -84,6 +84,18 @@ export const migrationStore = {
     return prisma.migrationJob.findMany({ orderBy: { createdAt: "desc" } });
   },
 
+  /**
+   * Delete finished jobs (completed/failed/rolled_back). In-progress jobs are
+   * left alone since they may still own live resources. Steps/logs/artifacts
+   * cascade. Returns the number of jobs removed.
+   */
+  async deleteTerminalJobs(): Promise<number> {
+    const res = await prisma.migrationJob.deleteMany({
+      where: { status: { in: ["completed", "failed", "rolled_back"] } },
+    });
+    return res.count;
+  },
+
   async updateJob(id: string, patch: Prisma.MigrationJobUpdateInput): Promise<MigrationJob> {
     return prisma.migrationJob.update({ where: { id }, data: patch });
   },
@@ -138,5 +150,35 @@ export const migrationStore = {
 
   async getArtifacts(jobId: string): Promise<MigrationArtifact[]> {
     return prisma.migrationArtifact.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } });
+  },
+
+  /**
+   * Reset the single failed step back to pending so the orchestrator advance
+   * loop can resume from it. Also clears the job-level errorMessage and
+   * restores the job status to the running status for that step.
+   * Returns false when no failed step exists (nothing to reset).
+   */
+  async resetFailedStep(jobId: string): Promise<boolean> {
+    const steps = await prisma.migrationStep.findMany({
+      where: { jobId },
+      orderBy: { order: "asc" },
+    });
+    const failedStep = steps.find((s) => s.status === "failed");
+    if (!failedStep) return false;
+    await this.updateStep(jobId, failedStep.key, {
+      status: "pending",
+      detail: null,
+      finishedAt: null,
+    });
+    await this.updateJob(jobId, {
+      status: stepJobStatus(failedStep.key),
+      errorMessage: null,
+    });
+    return true;
+  },
+
+  /** Delete a single migration job (steps/logs/artifacts cascade). */
+  async deleteJob(id: string): Promise<void> {
+    await prisma.migrationJob.delete({ where: { id } });
   },
 };

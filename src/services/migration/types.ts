@@ -1,4 +1,4 @@
-import type { Exposure } from "@/lib/migration";
+import type { Exposure, ResourceType } from "@/lib/migration";
 
 /** Typed, credential-free error carrying a stable code (mirrors CoolifyError). */
 export class MigrationError extends Error {
@@ -22,6 +22,8 @@ export interface HostCapacity {
   reachable: boolean;
   freeMemoryMb: number;
   freeDiskMb: number;
+  /** False when metrics are not measured (e.g. API-only, no SSH). */
+  metricsAvailable?: boolean;
 }
 
 export interface VolumeInfo {
@@ -32,6 +34,7 @@ export interface VolumeInfo {
 export interface ResourceSummary {
   id: string;
   name: string;
+  type: ResourceType;
   environment: string;
   hostId: string;
   hostName: string;
@@ -40,7 +43,6 @@ export interface ResourceSummary {
 
 /** Full inspected resource; this is what gets frozen into the job snapshot. */
 export interface ResourceInfo extends ResourceSummary {
-  type: string; // "application" | "compose"
   envVars: Array<{ key: string; value: string }>;
   buildConfig: Record<string, unknown>;
   volumes: VolumeInfo[];
@@ -60,4 +62,11 @@ export interface MigrationJobLike {
   npmEnabled: boolean;
   cloudflareEnabled: boolean;
   exposure: Exposure | string;
+}
+
+export interface SwitchEndpointsInput {
+  sourceResourceId: string;
+  destinationResourceId: string;
+  /** Custom (non-sslip) domains to move from source to destination. */
+  domains: string[];
 }

@@ -18,6 +18,7 @@ vi.mock("./provider", () => ({
     deployResource: vi.fn(),
     generateValidationUrl: vi.fn(),
     stopResource: vi.fn(),
+    startResource: vi.fn(),
     deleteResource: vi.fn(),
     switchEndpoints: vi.fn(),
   },
@@ -80,7 +81,7 @@ beforeEach(() => {
   validate.mockResolvedValue({ ok: true, checks: [], volumes: [], exposure: "internal", defaults: {}, source: SNAPSHOT_WITH_VOL });
 });
 
-describe("migrationOrchestrator.advance — one step at a time", () => {
+describe("migrationOrchestrator.advance - one step at a time", () => {
   it("runs validate, marks it success, and captures the snapshot", async () => {
     store.getJob.mockResolvedValue(jobRow());
     store.getSteps.mockResolvedValue([step("validate"), step("stop_source")]);
@@ -100,6 +101,45 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
     await migrationOrchestrator.advance("job-1");
     expect(store.updateStep).toHaveBeenCalledWith("job-1", "validate", expect.objectContaining({ status: "failed" }));
     expect(store.updateJob).toHaveBeenCalledWith("job-1", expect.objectContaining({ status: "failed" }));
+  });
+
+  it("restarts the source when a migrate fails after stop_source succeeded", async () => {
+    provider.createResource.mockRejectedValue(new Error("Coolify 409"));
+    store.getArtifact.mockResolvedValue(null); // provision failed: nothing to delete
+    store.getJob.mockResolvedValue(jobRow({ status: "transferring" }));
+    store.getSteps.mockResolvedValue([
+      step("stop_source", "success"),
+      step("provision", "pending"),
+    ]);
+    await migrationOrchestrator.advance("job-1");
+    expect(store.updateStep).toHaveBeenCalledWith("job-1", "provision", expect.objectContaining({ status: "failed" }));
+    expect(provider.startResource).toHaveBeenCalledWith("app-n8n");
+    expect(provider.deleteResource).not.toHaveBeenCalled();
+  });
+
+  it("deletes the destination resource when a step fails after provision", async () => {
+    provider.deployResource.mockRejectedValue(new Error("deploy boom"));
+    store.getArtifact.mockResolvedValue({ reference: "dest-1" });
+    store.getJob.mockResolvedValue(jobRow({ status: "deploying" }));
+    store.getSteps.mockResolvedValue([
+      step("stop_source", "success"),
+      step("provision", "success"),
+      step("deploy", "pending"),
+    ]);
+    await migrationOrchestrator.advance("job-1");
+    expect(store.updateStep).toHaveBeenCalledWith("job-1", "deploy", expect.objectContaining({ status: "failed" }));
+    expect(provider.deleteResource).toHaveBeenCalledWith("dest-1");
+    expect(provider.startResource).toHaveBeenCalledWith("app-n8n");
+  });
+
+  it("does NOT restart the source when stop_source has not succeeded", async () => {
+    validate.mockResolvedValue({
+      ok: false, checks: [{ key: "disk", label: "d", pass: false, detail: "x" }], volumes: [], exposure: "internal", defaults: {}, source: SNAPSHOT_WITH_VOL,
+    });
+    store.getJob.mockResolvedValue(jobRow());
+    store.getSteps.mockResolvedValue([step("validate")]);
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.startResource).not.toHaveBeenCalled();
   });
 
   it("skips a volume step when the snapshot has no volumes", async () => {
@@ -170,6 +210,48 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
       "job-1",
       "provision",
       expect.objectContaining({ status: "running", attemptNumber: 2 }),
+    );
+  });
+
+  it("switch_endpoints calls provider with custom domains (sslip filtered out)", async () => {
+    store.getJob.mockResolvedValue(jobRow({
+      status: "cutting_over",
+      sourceResourceId: "src-1",
+      sourceResourceSnapshot: {
+        volumes: [],
+        domains: ["app.example.com", "abc.10.0.0.5.sslip.io"],
+      },
+    }));
+    store.getSteps.mockResolvedValue([step("switch_endpoints")]);
+    store.getArtifact.mockResolvedValue({ reference: "dest-1" });
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.switchEndpoints).toHaveBeenCalledWith({
+      sourceResourceId: "src-1",
+      destinationResourceId: "dest-1",
+      domains: ["app.example.com"],
+    });
+    expect(store.updateStep).toHaveBeenCalledWith(
+      "job-1",
+      "switch_endpoints",
+      expect.objectContaining({ status: "success" }),
+    );
+  });
+
+  it("switch_endpoints skips provider call when snapshot has only sslip domains", async () => {
+    store.getJob.mockResolvedValue(jobRow({
+      status: "cutting_over",
+      sourceResourceSnapshot: {
+        volumes: [],
+        domains: ["abc.10.0.0.5.sslip.io"],
+      },
+    }));
+    store.getSteps.mockResolvedValue([step("switch_endpoints")]);
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.switchEndpoints).not.toHaveBeenCalled();
+    expect(store.updateStep).toHaveBeenCalledWith(
+      "job-1",
+      "switch_endpoints",
+      expect.objectContaining({ status: "success", detail: "Internal resource: no public domains to move." }),
     );
   });
 });

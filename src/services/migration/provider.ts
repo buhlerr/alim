@@ -3,11 +3,11 @@ import type {
   CreateResourceSpec,
   HostCapacity,
   HostSummary,
-  MigrationJobLike,
   ResourceInfo,
   ResourceSummary,
+  SwitchEndpointsInput,
 } from "./types";
-import { mockCoolifyProvider } from "./mock-coolify";
+import { coolifyPlatformProvider } from "./coolify-provider";
 
 /**
  * Platform-agnostic orchestration boundary. The engine depends ONLY on this
@@ -25,9 +25,9 @@ export interface PlatformProvider {
   generateValidationUrl(id: string, hostIp: string): Promise<string>;
   stopResource(id: string): Promise<void>;
   startResource(id: string): Promise<void>;
-  switchEndpoints(job: MigrationJobLike): Promise<void>;
+  switchEndpoints(input: SwitchEndpointsInput): Promise<void>;
   deleteResource(id: string): Promise<void>;
 }
 
 /** The active provider for this phase. Swap this line to go live. */
-export const platformProvider: PlatformProvider = mockCoolifyProvider;
+export const platformProvider: PlatformProvider = coolifyPlatformProvider;

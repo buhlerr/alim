@@ -150,6 +150,27 @@ model AuditLog {
   @@map("audit_log")
 }
 
+/// SSH access to a host, used by the migration engine's volume transfer. The
+/// private key is encrypted at rest (AES-256-GCM via src/lib/crypto.ts). Designed
+/// to be provider-agnostic (Coolify today; Portainer/Dokploy/raw Docker later).
+model HostCredential {
+  id                  String   @id @default(cuid())
+  name                String
+  hostname            String?
+  ipAddress           String   @map("ip_address")
+  sshPort             Int      @default(22) @map("ssh_port")
+  sshUsername         String   @default("root") @map("ssh_username")
+  encryptedPrivateKey String   @map("encrypted_private_key")
+  providerType        String   @default("coolify") @map("provider_type")
+  coolifyServerUuid   String?  @map("coolify_server_uuid")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([coolifyServerUuid])
+  @@index([ipAddress])
+  @@map("host_credentials")
+}
+
 /// A clone or migration of a Coolify resource from one server to another.
 /// The single source of truth for an in-flight or completed operation; all
 /// progress is recoverable from this row plus its steps/logs/artifacts.

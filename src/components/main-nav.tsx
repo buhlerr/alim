@@ -15,6 +15,7 @@ import {
   Settings,
   KeyRound,
   ScrollText,
+  Server,
   type LucideIcon,
 } from "lucide-react";
 
@@ -60,6 +61,7 @@ const SIDEBAR: NavSection[] = [
       { href: "/npm", label: "Proxy Hosts", icon: Network },
       { href: "/cloudflare", label: "Cloudflare", icon: Globe },
       { href: "/migrations", label: "Migrations", icon: ArrowLeftRight },
+      { href: "/hosts", label: "Hosts", icon: Server },
     ],
   },
   {

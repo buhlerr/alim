@@ -13,6 +13,8 @@ export const createMigrationSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/i, "Use letters, numbers and hyphens"),
   npmEnabled: z.boolean().optional(),
   cloudflareEnabled: z.boolean().optional(),
+  destinationProjectUuid: z.string().optional(),
+  destinationEnvironmentName: z.string().optional(),
 });
 
 export type CreateMigrationInput = z.infer<typeof createMigrationSchema>;

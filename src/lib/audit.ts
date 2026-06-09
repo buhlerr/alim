@@ -54,6 +54,11 @@ export const AUDIT_ACTIONS = {
   MIGRATION_APPROVE: "migration.approve",
   MIGRATION_ROLLBACK: "migration.rollback",
   MIGRATION_COMPLETE: "migration.complete",
+  MIGRATION_CLEAR: "migration.clear",
+  MIGRATION_RETRY: "migration.retry",
+  MIGRATION_DELETE: "migration.delete",
+  HOST_CREDENTIAL_SAVE: "host_credential.save",
+  HOST_CREDENTIAL_DELETE: "host_credential.delete",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -74,6 +79,7 @@ export const AUDIT_TARGET_TYPES = {
   CF_ZONE: "cf_zone",
   DEPLOYMENT: "deployment",
   MIGRATION: "migration",
+  HOST_CREDENTIAL: "host_credential",
 } as const;
 
 export type AuditTargetType =
@@ -129,6 +135,11 @@ export function actionLabel(action: string): string {
     [AUDIT_ACTIONS.MIGRATION_APPROVE]: "Approved migration cutover",
     [AUDIT_ACTIONS.MIGRATION_ROLLBACK]: "Rolled back migration",
     [AUDIT_ACTIONS.MIGRATION_COMPLETE]: "Completed migration",
+    [AUDIT_ACTIONS.MIGRATION_CLEAR]: "Cleared finished migrations",
+    [AUDIT_ACTIONS.MIGRATION_RETRY]: "Retried migration",
+    [AUDIT_ACTIONS.MIGRATION_DELETE]: "Deleted migration",
+    [AUDIT_ACTIONS.HOST_CREDENTIAL_SAVE]: "Saved host credential",
+    [AUDIT_ACTIONS.HOST_CREDENTIAL_DELETE]: "Deleted host credential",
   };
   return labels[action] ?? action;
 }

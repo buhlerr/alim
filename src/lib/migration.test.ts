@@ -5,6 +5,7 @@ import {
   isSslipDomain,
   buildSslipUrl,
   isTerminalStatus,
+  applyDestinationOverride,
 } from "./migration";
 
 describe("isSslipDomain", () => {
@@ -49,5 +50,33 @@ describe("isTerminalStatus", () => {
     expect(isTerminalStatus("rolled_back")).toBe(true);
     expect(isTerminalStatus("awaiting_approval")).toBe(false);
     expect(isTerminalStatus("provisioning")).toBe(false);
+  });
+});
+
+describe("applyDestinationOverride", () => {
+  const base = { buildConfig: { project_uuid: "proj-a", environment_name: "production", other: 1 } };
+
+  it("returns the same reference when no overrides are given", () => {
+    expect(applyDestinationOverride(base)).toBe(base);
+  });
+
+  it("replaces project_uuid when projectUuid is provided", () => {
+    const result = applyDestinationOverride(base, "proj-b");
+    expect(result.buildConfig.project_uuid).toBe("proj-b");
+    expect(result.buildConfig.environment_name).toBe("production");
+    expect(result.buildConfig.other).toBe(1);
+    expect(result).not.toBe(base);
+  });
+
+  it("replaces environment_name when envName is provided", () => {
+    const result = applyDestinationOverride(base, undefined, "staging");
+    expect(result.buildConfig.environment_name).toBe("staging");
+    expect(result.buildConfig.project_uuid).toBe("proj-a");
+  });
+
+  it("replaces both when both are provided", () => {
+    const result = applyDestinationOverride(base, "proj-c", "staging");
+    expect(result.buildConfig.project_uuid).toBe("proj-c");
+    expect(result.buildConfig.environment_name).toBe("staging");
   });
 });

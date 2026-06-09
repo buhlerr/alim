@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, XCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type {
   MigrationOptions,
   MigrationPreview,
+  MigrationProjectOption,
 } from "@/app/actions/migration";
 import {
   validateMigrationAction,
@@ -35,7 +36,6 @@ import type { MigrationType } from "@/lib/migration";
 
 export function MigrationWizard({ options }: { options: MigrationOptions }) {
   const router = useRouter();
-  const [step, setStep] = React.useState(1);
   const [sourceResourceId, setSourceResourceId] = React.useState(options.resources[0]?.id ?? "");
   const [migrationType, setMigrationType] = React.useState<MigrationType>("migrate");
   const [destinationHost, setDestinationHost] = React.useState("");
@@ -43,14 +43,19 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
   const [preview, setPreview] = React.useState<MigrationPreview | null>(null);
   const [npmEnabled, setNpmEnabled] = React.useState(false);
   const [cloudflareEnabled, setCloudflareEnabled] = React.useState(false);
+  const [destProject, setDestProject] = React.useState("");
+  const [destEnv, setDestEnv] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
   const source = options.resources.find((r) => r.id === sourceResourceId);
   const destinations = options.hosts.filter((h) => h.id !== source?.hostId);
 
+  // Until the user types a custom destination name, it follows the selected
+  // source resource (updating whenever the source changes).
+  const nameTouched = React.useRef(false);
   React.useEffect(() => {
-    if (source && !destinationResourceName) setDestinationResourceName(source.name);
-  }, [source, destinationResourceName]);
+    if (source && !nameTouched.current) setDestinationResourceName(source.name);
+  }, [source]);
 
   async function runValidation() {
     setBusy(true);
@@ -68,7 +73,8 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
     setPreview(res.data);
     setNpmEnabled(res.data.report.defaults.npmEnabled);
     setCloudflareEnabled(res.data.report.defaults.cloudflareEnabled);
-    setStep(4);
+    setDestProject(String(res.data.report.source.buildConfig.project_uuid ?? ""));
+    setDestEnv(String(res.data.report.source.buildConfig.environment_name ?? ""));
   }
 
   async function execute() {
@@ -80,6 +86,8 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
       destinationResourceName,
       npmEnabled,
       cloudflareEnabled,
+      destinationProjectUuid: destProject || undefined,
+      destinationEnvironmentName: destEnv || undefined,
     });
     setBusy(false);
     if (!res.ok || !res.data) {
@@ -104,7 +112,10 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectTrigger><SelectValue placeholder="Choose a resource" /></SelectTrigger>
             <SelectContent>
               {options.resources.map((r) => (
-                <SelectItem key={r.id} value={r.id}>{r.name} ({r.environment})</SelectItem>
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                  {r.hostName ? ` (${r.hostName})` : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -145,7 +156,10 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectContent>
               {destinations.map((h) => (
                 <SelectItem key={h.id} value={h.id}>
-                  {h.name} ({h.capacity.freeMemoryMb} MB RAM, {h.capacity.freeDiskMb} MB disk free)
+                  {h.name}
+                  {h.capacity.metricsAvailable
+                    ? ` (${h.capacity.freeMemoryMb} MB RAM, ${h.capacity.freeDiskMb} MB disk free)`
+                    : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -155,7 +169,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <Input
               id="destName"
               value={destinationResourceName}
-              onChange={(e) => { setDestinationResourceName(e.target.value); setPreview(null); }}
+              onChange={(e) => { nameTouched.current = true; setDestinationResourceName(e.target.value); setPreview(null); }}
             />
           </div>
           <Button
@@ -181,12 +195,14 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
           <CardContent className="space-y-2">
             {preview.report.checks.map((c) => (
               <div key={c.key} className="flex items-start gap-2 text-sm">
-                {c.pass ? (
+                {c.advisory ? (
+                  <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                ) : c.pass ? (
                   <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
                 ) : (
                   <XCircle className="mt-0.5 h-4 w-4 text-red-500" />
                 )}
-                <span>
+                <span className={c.advisory ? "text-muted-foreground" : undefined}>
                   <span className="font-medium">{c.label}</span>: {c.detail}
                 </span>
               </div>
@@ -203,9 +219,18 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
                 </label>
               </div>
             ) : null}
-            <Button variant="secondary" disabled={!validationOk} onClick={() => setStep(5)}>
-              Review plan
-              <ArrowRight className="h-4 w-4" />
+            {validationOk && options.projects.length > 0 ? (
+              <DestinationProjectEnvPicker
+                projects={options.projects}
+                destProject={destProject}
+                destEnv={destEnv}
+                onProjectChange={(uuid) => { setDestProject(uuid); setDestEnv(""); }}
+                onEnvChange={setDestEnv}
+              />
+            ) : null}
+            <Button disabled={!validationOk || busy} onClick={execute}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {migrationType === "clone" ? "Clone" : "Migrate"}
             </Button>
             {!validationOk ? (
               <p className="text-xs text-red-500">Fix the failing checks above (rename the destination if it is a duplicate) and re-validate.</p>
@@ -214,34 +239,53 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
         </Card>
       ) : null}
 
-      {/* Step 5: Plan */}
-      {preview && step >= 5 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>5 · Migration plan</CardTitle>
-            <CardDescription>Exactly what will happen, in order.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ol className="list-decimal space-y-1 pl-5 text-sm">
-              {preview.plan.map((s) => {
-                const willSkip =
-                  ["archive_volumes", "transfer_volumes", "restore_volumes"].includes(s.key) &&
-                  preview.report.volumes.length === 0;
-                return (
-                  <li key={s.key} className={willSkip ? "text-muted-foreground" : ""}>
-                    {s.label}
-                    {willSkip ? " (will be skipped, no volumes)" : ""}
-                  </li>
-                );
-              })}
-            </ol>
-            <Button onClick={execute} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Execute {migrationType}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
+  );
+}
+
+function DestinationProjectEnvPicker({
+  projects,
+  destProject,
+  destEnv,
+  onProjectChange,
+  onEnvChange,
+}: {
+  projects: MigrationProjectOption[];
+  destProject: string;
+  destEnv: string;
+  onProjectChange: (uuid: string) => void;
+  onEnvChange: (name: string) => void;
+}) {
+  const selected = projects.find((p) => p.uuid === destProject);
+  return (
+    <details className="pt-2">
+      <summary className="cursor-pointer text-sm text-muted-foreground select-none">
+        Destination project and environment (advanced)
+      </summary>
+      <div className="mt-2 space-y-2">
+        <div className="space-y-1">
+          <Label>Project</Label>
+          <Select value={destProject} onValueChange={onProjectChange}>
+            <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+            <SelectContent>
+              {projects.map((p) => (
+                <SelectItem key={p.uuid} value={p.uuid}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Environment</Label>
+          <Select value={destEnv} onValueChange={onEnvChange} disabled={!selected}>
+            <SelectTrigger><SelectValue placeholder="Select environment" /></SelectTrigger>
+            <SelectContent>
+              {(selected?.environments ?? []).map((e) => (
+                <SelectItem key={e.uuid} value={e.name}>{e.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </details>
   );
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import { isTerminalStatus } from "@/lib/migration";
+import { isTerminalStatus, isSslipDomain } from "@/lib/migration";
 import { migrationStore, type MigrationJobRow } from "./store";
 import { platformProvider } from "./provider";
 import { volumeTransfer } from "./volume-transfer";
@@ -99,16 +99,19 @@ async function handleValidationUrl(job: MigrationJobRow): Promise<StepOutcome> {
 }
 
 async function handleSwitchEndpoints(job: MigrationJobRow): Promise<StepOutcome> {
+  const snapshot = snapshotOf(job);
+  const custom = (snapshot.domains ?? []).filter((d) => !isSslipDomain(d));
+  if (custom.length === 0) {
+    return { detail: "Internal resource: no public domains to move." };
+  }
+  const art = await migrationStore.getArtifact(job.id, "destination_resource");
+  if (!art) throw new MigrationError("Destination resource not found.", "NO_DESTINATION");
   await platformProvider.switchEndpoints({
-    id: job.id,
     sourceResourceId: job.sourceResourceId,
-    destinationResourceName: job.destinationResourceName,
-    destinationHost: job.destinationHost,
-    npmEnabled: job.npmEnabled,
-    cloudflareEnabled: job.cloudflareEnabled,
-    exposure: job.exposure,
+    destinationResourceId: art.reference,
+    domains: custom,
   });
-  return { detail: "Public endpoints switched to the destination." };
+  return { detail: `Moved ${custom.length} domain(s) to the destination.` };
 }
 
 async function handleDeleteSource(job: MigrationJobRow): Promise<StepOutcome> {
@@ -202,6 +205,55 @@ export const migrationOrchestrator = {
       });
       await migrationStore.updateJob(jobId, { status: "failed", errorMessage: message });
       await migrationStore.appendLog(jobId, next.key, "error", message);
+
+      // Compensation: if a destination resource was already provisioned, delete
+      // it so a failed migration frees the name and leaves no orphan behind
+      // (applies to both clone and migrate; best effort).
+      const destArtifact = await migrationStore.getArtifact(jobId, "destination_resource");
+      if (destArtifact) {
+        try {
+          await platformProvider.deleteResource(destArtifact.reference);
+          await migrationStore.appendLog(
+            jobId,
+            null,
+            "info",
+            `Deleted the destination resource ${destArtifact.reference} created before the failure.`,
+          );
+        } catch {
+          await migrationStore.appendLog(
+            jobId,
+            null,
+            "warn",
+            "Could not delete the destination resource; remove it manually.",
+          );
+        }
+      }
+
+      // Compensation: a migrate that already stopped the source must not leave
+      // it down when a later step fails. Restart it (best effort).
+      if (job.migrationType === "migrate") {
+        const sourceStopped = steps.some(
+          (s) => s.key === "stop_source" && s.status === "success",
+        );
+        if (sourceStopped) {
+          try {
+            await platformProvider.startResource(job.sourceResourceId);
+            await migrationStore.appendLog(
+              jobId,
+              null,
+              "info",
+              "Restarted the source resource after the failed migration.",
+            );
+          } catch {
+            await migrationStore.appendLog(
+              jobId,
+              null,
+              "warn",
+              "Could not auto-restart the source resource; restart it manually.",
+            );
+          }
+        }
+      }
     }
 
     return (await migrationStore.getJob(jobId)) as MigrationJobRow;

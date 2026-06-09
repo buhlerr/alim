@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { PlatformProvider } from "./provider";
-import type { HostSummary, ResourceInfo, ResourceSummary } from "./types";
+import type { HostSummary, ResourceInfo, ResourceSummary, SwitchEndpointsInput } from "./types";
 
 /**
  * Deterministic-shape mock of a Coolify control plane. Returns realistic data
@@ -33,13 +33,25 @@ const RESOURCES: ResourceInfo[] = [
     hostId: "server-2",
     hostName: "Server 2",
     domains: ["n8n.10.0.0.5.sslip.io"],
-    type: "compose",
+    type: "service",
     envVars: [{ key: "N8N_HOST", value: "n8n.local" }],
-    buildConfig: { composeFile: "docker-compose.yml" },
+    buildConfig: { docker_compose_raw: "services:\n  n8n:\n    image: n8nio/n8n\n", project_uuid: "p1", environment_name: "PRODUCTION" },
     volumes: [
       { name: "n8n_data", estimatedSizeMb: 512 },
       { name: "n8n_files", estimatedSizeMb: 128 },
     ],
+  },
+  {
+    id: "db-postgres",
+    name: "postgres",
+    environment: "PRODUCTION",
+    hostId: "server-2",
+    hostName: "Server 2",
+    domains: [],
+    type: "database",
+    envVars: [],
+    buildConfig: { database_type: "standalone-postgresql" },
+    volumes: [{ name: "postgres_data", estimatedSizeMb: 2048 }],
   },
 ];
 
@@ -73,6 +85,7 @@ export const mockCoolifyProvider: PlatformProvider = {
     return RESOURCES.map<ResourceSummary>((r) => ({
       id: r.id,
       name: r.name,
+      type: r.type,
       environment: r.environment,
       hostId: r.hostId,
       hostName: r.hostName,
@@ -127,7 +140,7 @@ export const mockCoolifyProvider: PlatformProvider = {
     await delay();
   },
 
-  async switchEndpoints() {
+  async switchEndpoints(_input: SwitchEndpointsInput): Promise<void> {
     await delay();
   },
 

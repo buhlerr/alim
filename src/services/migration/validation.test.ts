@@ -35,13 +35,14 @@ beforeEach(() => {
     reachable: true,
     freeMemoryMb: 8192,
     freeDiskMb: 102400,
+    metricsAvailable: true,
   });
   p.inspectResource.mockResolvedValue(SOURCE);
   p.resourceExistsOnHost.mockResolvedValue(false);
 });
 
 describe("validationService.validate", () => {
-  it("passes all five checks for a reachable host with capacity and no duplicate", async () => {
+  it("passes blocking checks for a reachable host with no duplicate (capacity advisory)", async () => {
     const report = await validationService.validate({
       sourceResourceId: "app-n8n",
       destinationHost: "server-3",
@@ -55,7 +56,8 @@ describe("validationService.validate", () => {
       "memory",
       "duplicate_name",
     ]);
-    expect(report.checks.every((c) => c.pass)).toBe(true);
+    expect(report.checks.find((c) => c.key === "host_exists")?.advisory).toBeFalsy();
+    expect(report.checks.find((c) => c.key === "disk")?.advisory).toBe(true);
   });
 
   it("classifies a custom-domain resource as public with NPM+CF defaults on", async () => {
@@ -80,20 +82,29 @@ describe("validationService.validate", () => {
     expect(report.checks.find((c) => c.key === "host_exists")?.pass).toBe(false);
   });
 
-  it("fails when free disk is below the required estimate", async () => {
+  it("marks disk/memory advisory and does NOT block when metrics are low but present", async () => {
     p.getHostCapacity.mockResolvedValue({
-      hostId: "server-3",
-      reachable: true,
-      freeMemoryMb: 8192,
-      freeDiskMb: 10,
+      hostId: "server-3", reachable: true, freeMemoryMb: 1, freeDiskMb: 1, metricsAvailable: true,
     });
     const report = await validationService.validate({
-      sourceResourceId: "app-n8n",
-      destinationHost: "server-3",
-      destinationResourceName: "n8n",
+      sourceResourceId: "app-n8n", destinationHost: "server-3", destinationResourceName: "n8n",
     });
-    expect(report.checks.find((c) => c.key === "disk")?.pass).toBe(false);
-    expect(report.ok).toBe(false);
+    expect(report.checks.find((c) => c.key === "disk")?.advisory).toBe(true);
+    expect(report.ok).toBe(true);
+  });
+
+  it("shows disk/memory as not-measured when metrics are unavailable (API-only)", async () => {
+    p.getHostCapacity.mockResolvedValue({
+      hostId: "server-3", reachable: true, freeMemoryMb: 0, freeDiskMb: 0, metricsAvailable: false,
+    });
+    const report = await validationService.validate({
+      sourceResourceId: "app-n8n", destinationHost: "server-3", destinationResourceName: "n8n",
+    });
+    const disk = report.checks.find((c) => c.key === "disk");
+    expect(disk?.advisory).toBe(true);
+    expect(disk?.pass).toBe(true);
+    expect(disk?.detail).toMatch(/not measured/i);
+    expect(report.ok).toBe(true);
   });
 
   it("fails the duplicate-name check when the name is taken", async () => {

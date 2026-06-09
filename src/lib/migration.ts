@@ -4,6 +4,9 @@
  * these freely.
  */
 
+export type ResourceType = "application" | "service" | "database";
+export const RESOURCE_TYPES: ResourceType[] = ["application", "service", "database"];
+
 export type MigrationType = "clone" | "migrate";
 export const MIGRATION_TYPES: MigrationType[] = ["clone", "migrate"];
 
@@ -76,4 +79,25 @@ export function defaultFlags(exposure: Exposure): ExposureDefaults {
 /** e.g. buildSslipUrl("abc123", "192.168.100.11") -> https://abc123.192.168.100.11.sslip.io */
 export function buildSslipUrl(subdomain: string, hostIp: string): string {
   return `https://${subdomain}.${hostIp}.sslip.io`;
+}
+
+/**
+ * Return a snapshot with optional project/environment overrides applied to
+ * `buildConfig`. When neither override is provided the snapshot is returned
+ * unchanged (same reference).
+ */
+export function applyDestinationOverride<T extends { buildConfig: Record<string, unknown> }>(
+  snapshot: T,
+  projectUuid?: string,
+  envName?: string,
+): T {
+  if (!projectUuid && !envName) return snapshot;
+  return {
+    ...snapshot,
+    buildConfig: {
+      ...snapshot.buildConfig,
+      ...(projectUuid ? { project_uuid: projectUuid } : {}),
+      ...(envName ? { environment_name: envName } : {}),
+    },
+  };
 }
