@@ -50,7 +50,7 @@ export function MigrationClearButton() {
       <DialogTrigger asChild>
         <Button variant="outline">
           <Trash2 className="h-4 w-4" />
-          Clear finished
+          Clear
         </Button>
       </DialogTrigger>
       <DialogContent>
