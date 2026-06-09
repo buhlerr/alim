@@ -13,6 +13,7 @@ vi.mock("@/services/coolify/service", () => ({
     getProject: vi.fn(),
     createApplication: vi.fn(),
     setEnvVar: vi.fn(),
+    setEnvVarsBulk: vi.fn(),
     deploy: vi.fn(),
     getDeployment: vi.fn(),
     updateApplication: vi.fn(),
@@ -118,9 +119,9 @@ describe("coolifyPlatformProvider action methods", () => {
     volumes: [],
   };
 
-  it("createResource builds from the snapshot and replicates env vars", async () => {
+  it("createResource builds from the snapshot and bulk-replicates env vars", async () => {
     cs.createApplication.mockResolvedValue({ uuid: "dest1" });
-    cs.setEnvVar.mockResolvedValue(undefined);
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
     const res = await coolifyPlatformProvider.createResource({
       name: "web-copy", destinationHostId: "s2", snapshot,
     } as any);
@@ -130,7 +131,7 @@ describe("coolifyPlatformProvider action methods", () => {
       git_repository: "https://github.com/x/y", git_branch: "main",
       build_pack: "nixpacks", ports_exposes: "3000", name: "web-copy",
     }));
-    expect(cs.setEnvVar).toHaveBeenCalledWith("dest1", "NODE_ENV", "production");
+    expect(cs.setEnvVarsBulk).toHaveBeenCalledWith("dest1", [{ key: "NODE_ENV", value: "production" }]);
   });
 
   it("createResource normalizes an owner/repo git value to a full GitHub URL", async () => {

@@ -202,6 +202,32 @@ export const migrationOrchestrator = {
       });
       await migrationStore.updateJob(jobId, { status: "failed", errorMessage: message });
       await migrationStore.appendLog(jobId, next.key, "error", message);
+
+      // Compensation: a migrate that already stopped the source must not leave
+      // it down when a later step fails. Restart it (best effort).
+      if (job.migrationType === "migrate") {
+        const sourceStopped = steps.some(
+          (s) => s.key === "stop_source" && s.status === "success",
+        );
+        if (sourceStopped) {
+          try {
+            await platformProvider.startResource(job.sourceResourceId);
+            await migrationStore.appendLog(
+              jobId,
+              null,
+              "info",
+              "Restarted the source resource after the failed migration.",
+            );
+          } catch {
+            await migrationStore.appendLog(
+              jobId,
+              null,
+              "warn",
+              "Could not auto-restart the source resource; restart it manually.",
+            );
+          }
+        }
+      }
     }
 
     return (await migrationStore.getJob(jobId)) as MigrationJobRow;

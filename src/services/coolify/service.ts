@@ -84,6 +84,21 @@ export const coolifyService = {
     });
   },
 
+  /**
+   * Upsert many env vars in one call. POST /envs 409s when a key already exists
+   * (Coolify auto-creates some on new apps), so replication uses bulk PATCH.
+   */
+  async setEnvVarsBulk(
+    uuid: string,
+    vars: Array<{ key: string; value: string }>,
+  ): Promise<void> {
+    await coolifyFetch<void>({
+      path: `/applications/${uuid}/envs/bulk`,
+      method: "PATCH",
+      body: { data: vars },
+    });
+  },
+
   async listProjects(): Promise<CoolifyProject[]> {
     return coolifyFetch<CoolifyProject[]>({ path: "/projects" });
   },

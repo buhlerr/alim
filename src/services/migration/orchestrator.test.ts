@@ -18,6 +18,7 @@ vi.mock("./provider", () => ({
     deployResource: vi.fn(),
     generateValidationUrl: vi.fn(),
     stopResource: vi.fn(),
+    startResource: vi.fn(),
     deleteResource: vi.fn(),
     switchEndpoints: vi.fn(),
   },
@@ -100,6 +101,28 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
     await migrationOrchestrator.advance("job-1");
     expect(store.updateStep).toHaveBeenCalledWith("job-1", "validate", expect.objectContaining({ status: "failed" }));
     expect(store.updateJob).toHaveBeenCalledWith("job-1", expect.objectContaining({ status: "failed" }));
+  });
+
+  it("restarts the source when a migrate fails after stop_source succeeded", async () => {
+    provider.createResource.mockRejectedValue(new Error("Coolify 409"));
+    store.getJob.mockResolvedValue(jobRow({ status: "transferring" }));
+    store.getSteps.mockResolvedValue([
+      step("stop_source", "success"),
+      step("provision", "pending"),
+    ]);
+    await migrationOrchestrator.advance("job-1");
+    expect(store.updateStep).toHaveBeenCalledWith("job-1", "provision", expect.objectContaining({ status: "failed" }));
+    expect(provider.startResource).toHaveBeenCalledWith("app-n8n");
+  });
+
+  it("does NOT restart the source when stop_source has not succeeded", async () => {
+    validate.mockResolvedValue({
+      ok: false, checks: [{ key: "disk", label: "d", pass: false, detail: "x" }], volumes: [], exposure: "internal", defaults: {}, source: SNAPSHOT_WITH_VOL,
+    });
+    store.getJob.mockResolvedValue(jobRow());
+    store.getSteps.mockResolvedValue([step("validate")]);
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.startResource).not.toHaveBeenCalled();
   });
 
   it("skips a volume step when the snapshot has no volumes", async () => {

@@ -134,8 +134,9 @@ export const coolifyPlatformProvider: PlatformProvider = {
       ports_exposes: cfg.ports_exposes || "3000",
       name: spec.name,
     });
-    for (const ev of spec.snapshot.envVars) {
-      await coolifyService.setEnvVar(created.uuid, ev.key, ev.value);
+    if (spec.snapshot.envVars.length > 0) {
+      // Bulk upsert: POST /envs 409s on keys Coolify auto-creates on the new app.
+      await coolifyService.setEnvVarsBulk(created.uuid, spec.snapshot.envVars);
     }
     return { resourceId: created.uuid };
   },
