@@ -61,6 +61,20 @@ export interface CoolifyApplication {
   source_type?: string | null;
   /** Server lives here: destination.server.uuid (no flat server_uuid exists). */
   destination?: CoolifyDestination | null;
+  /** Health-check settings (live-verified: PATCH accepts and persists all). */
+  health_check_enabled?: boolean | null;
+  health_check_path?: string | null;
+  /** Container port/host mapped as "host:container" pairs. */
+  ports_mappings?: string | null;
+  /** Memory limit string, e.g. "256m" or "1g". */
+  limits_memory?: string | null;
+  /** CPU quota as a decimal string, e.g. "0.5". */
+  limits_cpus?: string | null;
+  pre_deployment_command?: string | null;
+  post_deployment_command?: string | null;
+  custom_docker_run_options?: string | null;
+  /** Pin a specific Docker image instead of building from source. */
+  static_image?: string | null;
 }
 
 export interface CoolifyGithubApp {
@@ -156,6 +170,16 @@ export interface UpdateApplicationRequest {
   publish_directory?: string;
   name?: string;
   description?: string;
+  /** Live-verified: PATCH accepts and persists these additional fields. */
+  health_check_enabled?: boolean;
+  health_check_path?: string;
+  ports_mappings?: string;
+  limits_memory?: string;
+  limits_cpus?: string;
+  pre_deployment_command?: string;
+  post_deployment_command?: string;
+  custom_docker_run_options?: string;
+  static_image?: string;
 }
 
 export interface CoolifyConnectionResult {

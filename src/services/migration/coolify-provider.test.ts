@@ -75,6 +75,10 @@ describe("coolifyPlatformProvider read methods", () => {
       build_pack: "nixpacks", ports_exposes: "3000",
       environment_id: 5,
       destination: { server: { uuid: "s1", name: "Server 1", ip: "10.0.0.1" } },
+      health_check_enabled: true, health_check_path: "/health",
+      ports_mappings: "9000:9000", limits_memory: "512m", limits_cpus: "1.0",
+      pre_deployment_command: "echo pre", post_deployment_command: "echo post",
+      custom_docker_run_options: "--cap-add=NET_ADMIN", static_image: null,
     });
     cs.listEnvVars.mockResolvedValue([{ key: "NODE_ENV", value: "production" }]);
     cs.listStorages.mockResolvedValue({ persistent_storages: [{ name: "web_data", mount_path: "/data" }], file_storages: [] });
@@ -94,6 +98,10 @@ describe("coolifyPlatformProvider read methods", () => {
       git_repository: "https://github.com/x/y", git_branch: "main",
       build_pack: "nixpacks", ports_exposes: "3000",
       project_uuid: "p1", environment_name: "production",
+      health_check_enabled: true, health_check_path: "/health",
+      ports_mappings: "9000:9000", limits_memory: "512m", limits_cpus: "1.0",
+      pre_deployment_command: "echo pre", post_deployment_command: "echo post",
+      custom_docker_run_options: "--cap-add=NET_ADMIN", static_image: null,
     });
   });
 
@@ -160,6 +168,85 @@ describe("coolifyPlatformProvider action methods", () => {
       base_directory: "/",
       publish_directory: "/",
     });
+  });
+
+  it("createResource replicates confirmed additional config fields via PATCH when set", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.updateApplication.mockResolvedValue(undefined);
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: {
+        ...snapshot,
+        buildConfig: {
+          ...snapshot.buildConfig,
+          health_check_enabled: true,
+          health_check_path: "/health",
+          ports_mappings: "9000:9000",
+          limits_memory: "256m",
+          limits_cpus: "0.5",
+          pre_deployment_command: "echo pre",
+          post_deployment_command: "echo post",
+          custom_docker_run_options: "--cap-add=NET_ADMIN",
+          static_image: "nginx:alpine",
+        },
+      },
+    } as any);
+    expect(cs.updateApplication).toHaveBeenCalledWith("dest1", expect.objectContaining({
+      health_check_enabled: true,
+      health_check_path: "/health",
+      ports_mappings: "9000:9000",
+      limits_memory: "256m",
+      limits_cpus: "0.5",
+      pre_deployment_command: "echo pre",
+      post_deployment_command: "echo post",
+      custom_docker_run_options: "--cap-add=NET_ADMIN",
+      static_image: "nginx:alpine",
+    }));
+  });
+
+  it("createResource omits additional config fields from PATCH when null/empty", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: {
+        ...snapshot,
+        buildConfig: {
+          ...snapshot.buildConfig,
+          health_check_enabled: null,
+          health_check_path: null,
+          ports_mappings: null,
+          limits_memory: null,
+          limits_cpus: null,
+          pre_deployment_command: null,
+          post_deployment_command: null,
+          custom_docker_run_options: null,
+          static_image: null,
+        },
+      },
+    } as any);
+    // updateApplication should not have been called (no fields to patch)
+    expect(cs.updateApplication).not.toHaveBeenCalled();
+  });
+
+  it("createResource replicates health_check_enabled=false explicitly via PATCH", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.updateApplication.mockResolvedValue(undefined);
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: {
+        ...snapshot,
+        buildConfig: {
+          ...snapshot.buildConfig,
+          health_check_enabled: false,
+        },
+      },
+    } as any);
+    expect(cs.updateApplication).toHaveBeenCalledWith("dest1", expect.objectContaining({
+      health_check_enabled: false,
+    }));
   });
 
   it("createResource uses the private GitHub App path for a private-repo source", async () => {

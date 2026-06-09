@@ -117,6 +117,16 @@ export const coolifyPlatformProvider: PlatformProvider = {
         start_command: app.start_command ?? null,
         base_directory: app.base_directory ?? null,
         publish_directory: app.publish_directory ?? null,
+        // Additional config live-verified as accepted by PATCH.
+        health_check_enabled: app.health_check_enabled ?? null,
+        health_check_path: app.health_check_path ?? null,
+        ports_mappings: app.ports_mappings ?? null,
+        limits_memory: app.limits_memory ?? null,
+        limits_cpus: app.limits_cpus ?? null,
+        pre_deployment_command: app.pre_deployment_command ?? null,
+        post_deployment_command: app.post_deployment_command ?? null,
+        custom_docker_run_options: app.custom_docker_run_options ?? null,
+        static_image: app.static_image ?? null,
       },
       volumes,
     };
@@ -171,20 +181,35 @@ export const coolifyPlatformProvider: PlatformProvider = {
       });
     }
 
-    // Replicate build configuration the create endpoints do not accept (install/
-    // build/start commands, base/publish directories). Only send fields that are
-    // actually set on the source so we never clear a default with an empty value.
-    const buildPatch: Record<string, string> = {};
+    // Replicate build configuration the create endpoints do not accept. Only
+    // send fields that are actually set on the source so we never clobber a
+    // default with an empty/null value.
+    const buildPatch: Record<string, string | boolean> = {};
+
+    // String fields: replicate when non-empty.
     for (const field of [
       "install_command",
       "build_command",
       "start_command",
       "base_directory",
       "publish_directory",
+      "health_check_path",
+      "ports_mappings",
+      "limits_memory",
+      "limits_cpus",
+      "pre_deployment_command",
+      "post_deployment_command",
+      "custom_docker_run_options",
+      "static_image",
     ] as const) {
       const value = cfg[field];
       if (typeof value === "string" && value.length > 0) buildPatch[field] = value;
     }
+
+    // Boolean fields: replicate whenever explicitly set (not null).
+    const hce = cfg["health_check_enabled"];
+    if (typeof hce === "boolean") buildPatch["health_check_enabled"] = hce;
+
     if (Object.keys(buildPatch).length > 0) {
       await coolifyService.updateApplication(created.uuid, buildPatch);
     }
