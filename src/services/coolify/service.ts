@@ -10,6 +10,7 @@ import {
   type CoolifyEnvVar,
   type CoolifyGithubApp,
   type CoolifyProject,
+  type CoolifySecurityKey,
   type CoolifyServer,
   type CoolifyServerResource,
   type CoolifyService,
@@ -111,6 +112,10 @@ export const coolifyService = {
 
   async listServers(): Promise<CoolifyServer[]> {
     return coolifyFetch<CoolifyServer[]>({ path: "/servers" });
+  },
+
+  async listSecurityKeys(): Promise<CoolifySecurityKey[]> {
+    return coolifyFetch<CoolifySecurityKey[]>({ path: "/security/keys" });
   },
 
   async listGithubApps(): Promise<CoolifyGithubApp[]> {

@@ -102,6 +102,14 @@ describe("coolifyService", () => {
     expect(fetchMock).toHaveBeenCalledWith({ path: "/servers" });
   });
 
+  it("listSecurityKeys GETs /security/keys", async () => {
+    fetchMock.mockResolvedValue([{ id: 1, uuid: "k1", name: "my-key", private_key: "-----BEGIN OPENSSH PRIVATE KEY-----", is_git_related: false }]);
+    const keys = await coolifyService.listSecurityKeys();
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/security/keys" });
+    expect(keys[0]?.id).toBe(1);
+    expect(keys[0]?.private_key).toBeDefined();
+  });
+
   it("getServer GETs /servers/:uuid", async () => {
     fetchMock.mockResolvedValue({ uuid: "s1", name: "Server 1", ip: "10.0.0.1", settings: { is_reachable: true } });
     await coolifyService.getServer("s1");

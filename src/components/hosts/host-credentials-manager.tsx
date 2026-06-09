@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { KeyRound, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, KeyRound, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
 import {
   saveHostCredentialAction,
   deleteHostCredentialAction,
+  importCoolifyHostCredentialsAction,
   type HostCredentialOption,
 } from "@/app/actions/hosts";
 
@@ -183,8 +185,31 @@ export function HostCredentialsManager({
 }: {
   servers: HostCredentialOption[];
 }) {
+  const router = useRouter();
   const [dialogState, setDialogState] = React.useState<CredentialFormState | null>(null);
   const [deleting, setDeleting] = React.useState<string | null>(null);
+  const [importing, setImporting] = React.useState(false);
+
+  async function handleImport() {
+    setImporting(true);
+    try {
+      const res = await importCoolifyHostCredentialsAction();
+      if (res.ok && res.data) {
+        const { imported, skipped } = res.data;
+        const skippedLines = skipped.length > 0
+          ? skipped.map((s) => `${s.name}: ${s.reason}`).join("\n")
+          : undefined;
+        toast.success(`Imported ${imported} credential${imported === 1 ? "" : "s"}. Skipped ${skipped.length}.`, {
+          description: skippedLines,
+        });
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Could not import from Coolify.");
+      }
+    } finally {
+      setImporting(false);
+    }
+  }
 
   function openAdd(server: HostCredentialOption) {
     setDialogState({
@@ -222,6 +247,12 @@ export function HostCredentialsManager({
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleImport} disabled={importing}>
+          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Import from Coolify
+        </Button>
+      </div>
       {servers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
