@@ -136,7 +136,7 @@ export function MainNav() {
   );
 }
 
-/** Compact horizontal nav shown on small screens — same items, flattened. */
+/** Compact horizontal nav shown on small screens (same items, flattened). */
 export function MobileNav() {
   const isActive = useIsActive();
   return (

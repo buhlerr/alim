@@ -16,7 +16,7 @@ export const NPM_SETTING_KEYS = {
 /**
  * Resolve Nginx Proxy Manager credentials: encrypted settings first, then
  * env-var fallback (NPM_BASE_URL / NPM_IDENTITY / NPM_SECRET). Returns null
- * unless all three are present. Server-only — never returns the secret to the
+ * unless all three are present. Server-only; never returns the secret to the
  * client.
  */
 export async function getNpmConfig(): Promise<NpmConfig | null> {

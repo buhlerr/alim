@@ -153,7 +153,7 @@ export function MigrationJobView({
               <StepIcon status={s.status} />
               <span className="flex-1">
                 <span className="font-medium">{s.label}</span>
-                {s.detail ? <span className="text-muted-foreground"> — {s.detail}</span> : null}
+                {s.detail ? <span className="text-muted-foreground">: {s.detail}</span> : null}
                 {s.attemptNumber > 1 ? (
                   <span className="text-xs text-muted-foreground"> (attempt {s.attemptNumber})</span>
                 ) : null}

@@ -51,7 +51,7 @@ export interface QueryEngine {
     database: string,
     sql: string,
   ): Promise<QueryResult>;
-  /** Run EXPLAIN (no ANALYZE — never executes the statement) and return the plan. */
+  /** Run EXPLAIN (no ANALYZE; never executes the statement) and return the plan. */
   explain(
     environment: Environment,
     database: string,

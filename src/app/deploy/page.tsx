@@ -22,7 +22,7 @@ export default function DeployPage() {
 }
 
 async function DeployWizardLoader() {
-  // Loads Coolify projects/servers + Cloudflare zones — streamed so a slow
+  // Loads Coolify projects/servers + Cloudflare zones; streamed so a slow
   // integration doesn't block the page shell.
   const options = await getDeploymentOptionsAction();
   return <DeploymentWizard options={options} />;

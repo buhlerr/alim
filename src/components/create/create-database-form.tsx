@@ -105,7 +105,7 @@ export function CreateDatabaseForm({ configured, environments }: Props) {
         toast.success(
           res.data.status === "created"
             ? "Database provisioned successfully."
-            : "Target already existed — credentials refreshed.",
+            : "Target already existed; credentials refreshed.",
         );
       } else {
         if (res.fieldErrors) setFieldErrors(res.fieldErrors);
@@ -142,7 +142,7 @@ export function CreateDatabaseForm({ configured, environments }: Props) {
             {environments.map((env) => (
               <SelectItem key={env.key} value={env.key} disabled={!configured[env.key]}>
                 {env.name}
-                {!configured[env.key] ? " — not configured" : ""}
+                {!configured[env.key] ? " (not configured)" : ""}
               </SelectItem>
             ))}
           </SelectContent>

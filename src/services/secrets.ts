@@ -8,7 +8,7 @@ import { encrypt, decrypt } from "@/lib/crypto";
  * through `reveal()`; `list()` returns metadata only.
  */
 
-/** Metadata view of a secret — never includes the value or ciphertext. */
+/** Metadata view of a secret; never includes the value or ciphertext. */
 export interface SecretSummary {
   id: string;
   name: string;
@@ -84,7 +84,7 @@ export const secretsService = {
   /**
    * Decrypt and return the plaintext value, stamping `lastRevealedAt`. Returns
    * null if the secret is missing or its value can't be decrypted (e.g. a
-   * rotated/absent ENCRYPTION_KEY) — never throws for those cases.
+   * rotated/absent ENCRYPTION_KEY); never throws for those cases.
    */
   async reveal(id: string): Promise<string | null> {
     const row = await prisma.secret.findUnique({ where: { id } });

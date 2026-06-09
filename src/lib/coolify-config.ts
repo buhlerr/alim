@@ -14,7 +14,7 @@ export const COOLIFY_SETTING_KEYS = {
 /**
  * Resolve Coolify credentials: encrypted settings first, then env-var fallback
  * (COOLIFY_BASE_URL / COOLIFY_API_TOKEN). Returns null unless BOTH are present.
- * Server-only — never returns the token to the client.
+ * Server-only; never returns the token to the client.
  */
 export async function getCoolifyConfig(): Promise<CoolifyConfig | null> {
   const baseUrlRaw =

@@ -21,7 +21,7 @@ function quoteIdent(name: string): string {
  * Escape a string as a PostgreSQL string literal.
  *
  * The PASSWORD clause of CREATE/ALTER ROLE is a utility statement whose grammar
- * requires a literal string constant — bind parameters ($1) are rejected with a
+ * requires a literal string constant; bind parameters ($1) are rejected with a
  * syntax error (42601). So the password must be interpolated as an escaped
  * literal: single quotes are doubled, and the E'' form is used when a backslash
  * is present. Mirrors Postgres's own quote_literal().

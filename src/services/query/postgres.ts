@@ -16,7 +16,7 @@ const CONNECT_TIMEOUT_MS = 10_000;
 
 /** Connection errors get a friendly, credential-free message. SQL errors keep
  *  their PostgreSQL message (syntax/undefined-table/etc.) which is what a
- *  console user needs — those never contain the connection string. */
+ *  console user needs; those never contain the connection string. */
 function toQueryError(err: unknown): QueryError {
   const e = err as { code?: string; message?: string };
   switch (e?.code) {

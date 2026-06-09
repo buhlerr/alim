@@ -38,7 +38,7 @@ export interface ResourceSummary {
   domains: string[];
 }
 
-/** Full inspected resource — this is what gets frozen into the job snapshot. */
+/** Full inspected resource; this is what gets frozen into the job snapshot. */
 export interface ResourceInfo extends ResourceSummary {
   type: string; // "application" | "compose"
   envVars: Array<{ key: string; value: string }>;

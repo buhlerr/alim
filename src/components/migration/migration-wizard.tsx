@@ -104,7 +104,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectTrigger><SelectValue placeholder="Choose a resource" /></SelectTrigger>
             <SelectContent>
               {options.resources.map((r) => (
-                <SelectItem key={r.id} value={r.id}>{r.name} — {r.environment}</SelectItem>
+                <SelectItem key={r.id} value={r.id}>{r.name} ({r.environment})</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -145,7 +145,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
             <SelectContent>
               {destinations.map((h) => (
                 <SelectItem key={h.id} value={h.id}>
-                  {h.name} — {h.capacity.freeMemoryMb} MB RAM, {h.capacity.freeDiskMb} MB disk free
+                  {h.name} ({h.capacity.freeMemoryMb} MB RAM, {h.capacity.freeDiskMb} MB disk free)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -187,7 +187,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
                   <XCircle className="mt-0.5 h-4 w-4 text-red-500" />
                 )}
                 <span>
-                  <span className="font-medium">{c.label}</span> — {c.detail}
+                  <span className="font-medium">{c.label}</span>: {c.detail}
                 </span>
               </div>
             ))}
@@ -230,7 +230,7 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
                 return (
                   <li key={s.key} className={willSkip ? "text-muted-foreground" : ""}>
                     {s.label}
-                    {willSkip ? " (will be skipped — no volumes)" : ""}
+                    {willSkip ? " (will be skipped, no volumes)" : ""}
                   </li>
                 );
               })}

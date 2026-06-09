@@ -34,7 +34,7 @@ export type TargetSource = "settings" | "env";
 /**
  * Returns the raw admin connection string for an environment: encrypted
  * settings first, then the legacy env var. Null if neither is set/blank.
- * Server-only — never send the result to the client.
+ * Server-only; never send the result to the client.
  */
 export async function getAdminUrl(environment: Environment): Promise<string | null> {
   const fromSettings = await settingsService.get(POSTGRES_SETTING_KEYS(environment));

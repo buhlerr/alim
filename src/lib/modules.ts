@@ -1,5 +1,5 @@
 /**
- * Module registry — the single declaration of every feature "module" in the
+ * Module registry: the single declaration of every feature "module" in the
  * platform. The sidebar (`main-nav`) and the dashboard hub both render from this
  * list, so adding a module to the UI is a matter of adding an entry here.
  *

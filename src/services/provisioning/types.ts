@@ -2,7 +2,7 @@
  * Provisioner abstraction.
  *
  * v1 ships a PostgreSQL implementation. Future engines (MySQL, Redis) implement
- * this same interface so the UI and server actions don't need to change — they
+ * this same interface so the UI and server actions don't need to change; they
  * select a provisioner by engine and call `provision()`.
  */
 import type { Environment } from "@/lib/targets";
@@ -30,7 +30,7 @@ export interface ProvisionResult {
   username: string;
   host: string;
   port: number;
-  /** Full connection string WITH password. In-memory only — never persisted. */
+  /** Full connection string WITH password. In-memory only; never persisted. */
   connectionString: string;
   status: ProvisionStatus;
   steps: StepResult[];

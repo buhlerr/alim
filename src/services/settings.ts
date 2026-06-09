@@ -27,7 +27,7 @@ export const settingsService = {
     try {
       return decrypt(row.encryptedValue);
     } catch {
-      // Stale value encrypted under a rotated/absent key — treat as unset.
+      // Stale value encrypted under a rotated/absent key; treat as unset.
       return null;
     }
   },

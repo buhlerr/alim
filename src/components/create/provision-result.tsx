@@ -45,7 +45,7 @@ export function ProvisionResultPanel({
           </p>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Copy the connection strings now — passwords are not stored and cannot
+          Copy the connection strings now; passwords are not stored and cannot
           be retrieved later.
         </p>
       </div>

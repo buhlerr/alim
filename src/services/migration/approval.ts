@@ -21,7 +21,7 @@ export const approvalService = {
   },
 
   /**
-   * Compensating rollback. Valid only from awaiting_approval — once cutover has
+   * Compensating rollback. Valid only from awaiting_approval; once cutover has
    * begun, reversal requires a new opposite-direction migration.
    */
   async rollback(jobId: string): Promise<MigrationJobRow> {

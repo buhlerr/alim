@@ -3,7 +3,7 @@ import { settingsService } from "@/services/settings";
 
 export interface CloudflareConfig {
   apiToken: string;
-  /** Optional — required only for tunnel (account-scoped) endpoints. */
+  /** Optional; required only for tunnel (account-scoped) endpoints. */
   accountId: string;
 }
 
@@ -16,7 +16,7 @@ export const CLOUDFLARE_SETTING_KEYS = {
  * Resolve Cloudflare credentials: encrypted settings first, then env-var
  * fallback (CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID). Only the token is
  * required; the account ID may be blank (tunnel features need it). Returns null
- * when no token is configured. Server-only — never returns the token to the
+ * when no token is configured. Server-only; never returns the token to the
  * client.
  */
 export async function getCloudflareConfig(): Promise<CloudflareConfig | null> {

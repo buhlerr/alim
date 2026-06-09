@@ -37,7 +37,7 @@ export const VOLUME_STEP_KEYS = [
 ] as const;
 
 /**
- * Pure: the plan depends ONLY on the migration type — never on volumes,
+ * Pure: the plan depends ONLY on the migration type; never on volumes,
  * exposure, or flags. The shape is always identical for a given type.
  */
 export function buildPlan(type: MigrationType): StepDef[] {

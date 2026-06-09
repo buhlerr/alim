@@ -30,7 +30,7 @@ export default function Error({
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">Something went wrong</h2>
             <p className="text-sm text-muted-foreground">
-              This page hit an unexpected error. It&apos;s usually transient — try
+              This page hit an unexpected error. It&apos;s usually transient; try
               again, or check that the relevant service is reachable.
             </p>
           </div>
