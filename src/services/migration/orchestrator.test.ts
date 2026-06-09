@@ -105,6 +105,7 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
 
   it("restarts the source when a migrate fails after stop_source succeeded", async () => {
     provider.createResource.mockRejectedValue(new Error("Coolify 409"));
+    store.getArtifact.mockResolvedValue(null); // provision failed: nothing to delete
     store.getJob.mockResolvedValue(jobRow({ status: "transferring" }));
     store.getSteps.mockResolvedValue([
       step("stop_source", "success"),
@@ -112,6 +113,22 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
     ]);
     await migrationOrchestrator.advance("job-1");
     expect(store.updateStep).toHaveBeenCalledWith("job-1", "provision", expect.objectContaining({ status: "failed" }));
+    expect(provider.startResource).toHaveBeenCalledWith("app-n8n");
+    expect(provider.deleteResource).not.toHaveBeenCalled();
+  });
+
+  it("deletes the destination resource when a step fails after provision", async () => {
+    provider.deployResource.mockRejectedValue(new Error("deploy boom"));
+    store.getArtifact.mockResolvedValue({ reference: "dest-1" });
+    store.getJob.mockResolvedValue(jobRow({ status: "deploying" }));
+    store.getSteps.mockResolvedValue([
+      step("stop_source", "success"),
+      step("provision", "success"),
+      step("deploy", "pending"),
+    ]);
+    await migrationOrchestrator.advance("job-1");
+    expect(store.updateStep).toHaveBeenCalledWith("job-1", "deploy", expect.objectContaining({ status: "failed" }));
+    expect(provider.deleteResource).toHaveBeenCalledWith("dest-1");
     expect(provider.startResource).toHaveBeenCalledWith("app-n8n");
   });
 
