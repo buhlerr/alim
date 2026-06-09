@@ -3,8 +3,8 @@
  * layout metadata, sidebar, and dashboard so the name/version live in one place.
  */
 export const BRAND = {
-  appName: "AspyreLabs DevOps Manager",
-  shortName: "Aspyre DevOps",
+  appName: "Aspyre Labs Infrastructure Manager",
+  shortName: "ALIM",
   tagline: "Centralized infrastructure administration",
   version: "1.0",
 } as const;

@@ -6,5 +6,5 @@ set -e
 echo "→ Running database migrations…"
 node_modules/.bin/prisma migrate deploy
 
-echo "→ Starting DB Provisioner…"
+echo "→ Starting Aspyre Labs Infrastructure Manager (ALIM)…"
 exec "$@"

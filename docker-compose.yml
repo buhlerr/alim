@@ -1,4 +1,4 @@
-# DB Provisioner — docker-compose
+# Aspyre Labs Infrastructure Manager (ALIM): docker-compose
 #
 # Local/self-hosted stack: the app plus its own metadata database. The three
 # PostgreSQL servers you provision INTO are external and configured via the

@@ -30,7 +30,7 @@ const display = Chakra_Petch({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND.appName} · Aspyre Labs`,
+  title: `${BRAND.appName} (${BRAND.shortName})`,
   description: BRAND.tagline,
 };
 
