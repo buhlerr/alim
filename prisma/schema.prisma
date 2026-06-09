@@ -149,3 +149,91 @@ model AuditLog {
   @@index([targetType])
   @@map("audit_log")
 }
+
+/// A clone or migration of a Coolify resource from one server to another.
+/// The single source of truth for an in-flight or completed operation; all
+/// progress is recoverable from this row plus its steps/logs/artifacts.
+model MigrationJob {
+  id                      String    @id @default(cuid())
+  migrationType           String    @map("migration_type") // "clone" | "migrate"
+  sourceResourceId        String    @map("source_resource_id")
+  sourceResourceName      String    @map("source_resource_name")
+  destinationResourceName String    @map("destination_resource_name")
+  sourceHost              String    @map("source_host")
+  sourceHostName          String    @map("source_host_name")
+  destinationHost         String    @map("destination_host")
+  destinationHostName     String    @map("destination_host_name")
+  status                  String    @default("pending")
+  exposure                String // "internal" | "public"
+  validationUrl           String?   @map("validation_url")
+  npmEnabled              Boolean   @default(false) @map("npm_enabled")
+  cloudflareEnabled       Boolean   @default(false) @map("cloudflare_enabled")
+  currentStepKey          String?   @map("current_step_key")
+  // The exact source config the destination is provisioned from, captured at
+  // execution start so the validated resource IS the promoted resource.
+  sourceResourceSnapshot  Json      @map("source_resource_snapshot")
+  errorMessage            String?   @map("error_message")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  approvedAt              DateTime? @map("approved_at")
+  completedAt             DateTime? @map("completed_at")
+
+  steps     MigrationStep[]
+  logs      MigrationLog[]
+  artifacts MigrationArtifact[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("migration_jobs")
+}
+
+/// One row per workflow step. Enables resumability: on restart the orchestrator
+/// finds the first non-final step and continues. `attemptNumber` increments when
+/// a step left "running" by a crash is retried.
+model MigrationStep {
+  id            String       @id @default(cuid())
+  jobId         String       @map("job_id")
+  job           MigrationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  key           String
+  label         String
+  order         Int          @map("step_order")
+  status        String       @default("pending") // pending|running|success|failed|skipped
+  attemptNumber Int          @default(1) @map("attempt_number")
+  detail        String?
+  startedAt     DateTime?    @map("started_at")
+  finishedAt    DateTime?    @map("finished_at")
+
+  @@unique([jobId, key])
+  @@index([jobId])
+  @@map("migration_steps")
+}
+
+/// Persistent, append-only log lines for a job (and optionally a step). Drives
+/// the live log stream and survives reloads.
+model MigrationLog {
+  id        String       @id @default(cuid())
+  jobId     String       @map("job_id")
+  job       MigrationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  stepKey   String?      @map("step_key")
+  level     String       @default("info") // info|warn|error
+  message   String
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([jobId, createdAt])
+  @@map("migration_logs")
+}
+
+/// Tracked outputs created during a run (destination resource id, volume
+/// archives, validation URL). Rollback reads these to know what to compensate.
+model MigrationArtifact {
+  id        String       @id @default(cuid())
+  jobId     String       @map("job_id")
+  job       MigrationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type      String
+  reference String
+  metadata  Json?
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([jobId])
+  @@map("migration_artifacts")
+}
