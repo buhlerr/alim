@@ -14,7 +14,7 @@ import type {
 } from "./types";
 
 const DEPLOY_TIMEOUT_MS = 10 * 60 * 1000;
-const DEPLOY_POLL_MS = 5_000;
+const DEPLOY_POLL_MS = 2_000;
 
 function splitDomains(fqdn: string | null | undefined): string[] {
   if (!fqdn) return [];
@@ -103,29 +103,73 @@ export const coolifyPlatformProvider: PlatformProvider = {
     return resources.some((r) => r.name === name);
   },
 
-  // Action methods implemented in Task 6.
-  async createResource(_spec: CreateResourceSpec): Promise<{ resourceId: string }> {
-    throw new MigrationError("createResource not implemented yet.", "NOT_IMPLEMENTED");
+  async createResource(spec: CreateResourceSpec): Promise<{ resourceId: string }> {
+    const cfg = spec.snapshot.buildConfig as Record<string, string>;
+    if (!cfg.project_uuid) {
+      throw new MigrationError(
+        "Cannot infer the destination project for this resource. (Explicit targeting arrives in Phase C.)",
+        "INFER_FAILED",
+      );
+    }
+    const created = await coolifyService.createApplication({
+      project_uuid: cfg.project_uuid,
+      server_uuid: spec.destinationHostId,
+      environment_name: cfg.environment_name || "production",
+      git_repository: cfg.git_repository,
+      git_branch: cfg.git_branch || "main",
+      build_pack: cfg.build_pack || "nixpacks",
+      ports_exposes: cfg.ports_exposes || "3000",
+      name: spec.name,
+    });
+    for (const ev of spec.snapshot.envVars) {
+      await coolifyService.setEnvVar(created.uuid, ev.key, ev.value);
+    }
+    return { resourceId: created.uuid };
   },
-  async deployResource(_id: string): Promise<void> {
-    throw new MigrationError("deployResource not implemented yet.", "NOT_IMPLEMENTED");
+
+  async deployResource(id: string): Promise<void> {
+    const res = await coolifyService.deploy(id);
+    const deploymentUuid = res.deployments?.[0]?.deployment_uuid;
+    if (!deploymentUuid) {
+      // Older Coolify returns only a message and cannot be polled; best effort.
+      return;
+    }
+    const deadline = Date.now() + DEPLOY_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      const dep = await coolifyService.getDeployment(deploymentUuid);
+      const status = (dep.status ?? "").toLowerCase();
+      if (status.includes("finish") || status === "success" || status === "running") return;
+      if (status.includes("fail") || status.includes("error") || status.includes("cancel")) {
+        throw new MigrationError(`Coolify deployment ${status || "failed"}.`, "DEPLOY_FAILED");
+      }
+      await sleep(DEPLOY_POLL_MS);
+    }
+    throw new MigrationError("Coolify deployment timed out.", "DEPLOY_TIMEOUT");
   },
-  async generateValidationUrl(_id: string, _hostIp: string): Promise<string> {
-    throw new MigrationError("generateValidationUrl not implemented yet.", "NOT_IMPLEMENTED");
+
+  async generateValidationUrl(id: string, hostIp: string): Promise<string> {
+    const app = await coolifyService.getApplication(id);
+    const existing = splitDomains(app.fqdn)[0];
+    if (existing) return existing.startsWith("http") ? existing : `https://${existing}`;
+    const url = `https://${randomBytes(4).toString("hex")}.${hostIp}.sslip.io`;
+    await coolifyService.updateApplication(id, { domains: url });
+    await this.deployResource(id);
+    return url;
   },
-  async stopResource(_id: string): Promise<void> {
-    throw new MigrationError("stopResource not implemented yet.", "NOT_IMPLEMENTED");
+
+  async stopResource(id: string): Promise<void> {
+    await coolifyService.stopApplication(id);
   },
-  async startResource(_id: string): Promise<void> {
-    throw new MigrationError("startResource not implemented yet.", "NOT_IMPLEMENTED");
+
+  async startResource(id: string): Promise<void> {
+    await coolifyService.startApplication(id);
   },
+
   async switchEndpoints(_job: MigrationJobLike): Promise<void> {
     // Endpoint switching is deferred (roadmap). No-op this phase.
   },
-  async deleteResource(_id: string): Promise<void> {
-    throw new MigrationError("deleteResource not implemented yet.", "NOT_IMPLEMENTED");
+
+  async deleteResource(id: string): Promise<void> {
+    await coolifyService.deleteApplication(id);
   },
 };
-
-// Used by Task 6; remove this export when the action methods are implemented.
-export const __t6 = { DEPLOY_TIMEOUT_MS, DEPLOY_POLL_MS, sleep, splitDomains, randomBytes };

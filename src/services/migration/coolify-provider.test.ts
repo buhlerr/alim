@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/services/coolify/service", () => ({
   coolifyService: {
@@ -98,5 +98,79 @@ describe("coolifyPlatformProvider read methods", () => {
     cs.listServerResources.mockResolvedValue([{ uuid: "a1", name: "web" }]);
     expect(await coolifyPlatformProvider.resourceExistsOnHost("s1", "web")).toBe(true);
     expect(await coolifyPlatformProvider.resourceExistsOnHost("s1", "other")).toBe(false);
+  });
+});
+
+describe("coolifyPlatformProvider action methods", () => {
+  beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const snapshot = {
+    id: "src", name: "web", environment: "production",
+    hostId: "s1", hostName: "Server 1", domains: ["web.example.com"],
+    type: "application",
+    envVars: [{ key: "NODE_ENV", value: "production" }],
+    buildConfig: {
+      git_repository: "https://github.com/x/y", git_branch: "main",
+      build_pack: "nixpacks", ports_exposes: "3000",
+      project_uuid: "p1", environment_name: "production",
+    },
+    volumes: [],
+  };
+
+  it("createResource builds from the snapshot and replicates env vars", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.setEnvVar.mockResolvedValue(undefined);
+    const res = await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2", snapshot,
+    } as any);
+    expect(res).toEqual({ resourceId: "dest1" });
+    expect(cs.createApplication).toHaveBeenCalledWith(expect.objectContaining({
+      project_uuid: "p1", server_uuid: "s2", environment_name: "production",
+      git_repository: "https://github.com/x/y", git_branch: "main",
+      build_pack: "nixpacks", ports_exposes: "3000", name: "web-copy",
+    }));
+    expect(cs.setEnvVar).toHaveBeenCalledWith("dest1", "NODE_ENV", "production");
+  });
+
+  it("createResource throws when project cannot be inferred", async () => {
+    await expect(coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: { ...snapshot, buildConfig: { ...snapshot.buildConfig, project_uuid: "" } },
+    } as any)).rejects.toThrow(/project/i);
+  });
+
+  it("deployResource polls until the deployment finishes", async () => {
+    cs.deploy.mockResolvedValue({ deployments: [{ deployment_uuid: "d1" }] });
+    cs.getDeployment
+      .mockResolvedValueOnce({ status: "in_progress" })
+      .mockResolvedValueOnce({ status: "finished" });
+    await coolifyPlatformProvider.deployResource("dest1");
+    expect(cs.deploy).toHaveBeenCalledWith("dest1");
+    expect(cs.getDeployment).toHaveBeenCalledTimes(2);
+  });
+
+  it("deployResource throws when the deployment fails", async () => {
+    cs.deploy.mockResolvedValue({ deployments: [{ deployment_uuid: "d1" }] });
+    cs.getDeployment.mockResolvedValue({ status: "failed" });
+    await expect(coolifyPlatformProvider.deployResource("dest1")).rejects.toThrow(/deploy/i);
+  });
+
+  it("generateValidationUrl returns the Coolify-assigned fqdn when present", async () => {
+    cs.getApplication.mockResolvedValue({ uuid: "dest1", name: "web", fqdn: "https://abc.10.0.0.2.sslip.io" });
+    const url = await coolifyPlatformProvider.generateValidationUrl("dest1", "10.0.0.2");
+    expect(url).toBe("https://abc.10.0.0.2.sslip.io");
+  });
+
+  it("stop/start/delete delegate to the service", async () => {
+    cs.stopApplication.mockResolvedValue(undefined);
+    cs.startApplication.mockResolvedValue(undefined);
+    cs.deleteApplication.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.stopResource("a1");
+    await coolifyPlatformProvider.startResource("a1");
+    await coolifyPlatformProvider.deleteResource("a1");
+    expect(cs.stopApplication).toHaveBeenCalledWith("a1");
+    expect(cs.startApplication).toHaveBeenCalledWith("a1");
+    expect(cs.deleteApplication).toHaveBeenCalledWith("a1");
   });
 });
