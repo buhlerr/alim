@@ -1,4 +1,4 @@
-// DB Provisioner — Prisma schema
+// Aspyre Labs Infrastructure Manager (ALIM): Prisma schema
 //
 // This database is the application's OWN metadata store. It is separate from the
 // PostgreSQL servers the app provisions into (those are reached via the
