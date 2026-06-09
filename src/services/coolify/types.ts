@@ -14,6 +14,26 @@ export class CoolifyError extends Error {
   }
 }
 
+export interface CoolifyServerSettings {
+  is_reachable?: boolean;
+  is_usable?: boolean;
+}
+
+export interface CoolifyServer {
+  uuid: string;
+  name: string;
+  ip?: string | null;
+  description?: string | null;
+  settings?: CoolifyServerSettings;
+}
+
+export interface CoolifyDestination {
+  uuid?: string;
+  name?: string;
+  network?: string;
+  server?: CoolifyServer;
+}
+
 export interface CoolifyApplication {
   uuid: string;
   name: string;
@@ -23,7 +43,12 @@ export interface CoolifyApplication {
   git_repository?: string | null;
   git_branch?: string | null;
   build_pack?: string | null;
+  ports_exposes?: string | null;
   description?: string | null;
+  /** Integer environment id; resolve to project+environment via /projects. */
+  environment_id?: number | null;
+  /** Server lives here: destination.server.uuid (no flat server_uuid exists). */
+  destination?: CoolifyDestination | null;
 }
 
 export interface CoolifyEnvVar {
@@ -33,14 +58,50 @@ export interface CoolifyEnvVar {
   is_build_time?: boolean;
 }
 
-export interface CoolifyProject {
+export interface CoolifyEnvironment {
+  id: number;
   uuid: string;
   name: string;
 }
 
-export interface CoolifyServer {
+export interface CoolifyProject {
   uuid: string;
   name: string;
+  /** Present on GET /projects/{uuid}; absent on the GET /projects list. */
+  environments?: CoolifyEnvironment[];
+}
+
+export interface CoolifyServerResource {
+  uuid: string;
+  name: string;
+  type?: string;
+  status?: string;
+}
+
+export interface CoolifyStorage {
+  uuid?: string;
+  name: string;
+  mount_path?: string | null;
+  host_path?: string | null;
+}
+
+/** GET /applications/{uuid}/storages returns this wrapper, not a flat array. */
+export interface CoolifyStoragesResponse {
+  persistent_storages?: CoolifyStorage[];
+  file_storages?: CoolifyStorage[];
+}
+
+export interface CoolifyDeployment {
+  uuid?: string;
+  deployment_uuid?: string;
+  /** queued | in_progress | finished | failed | cancelled (per OpenAPI; confirm live). */
+  status?: string;
+  application_uuid?: string;
+}
+
+export interface CoolifyDeployResponse {
+  deployments?: Array<{ deployment_uuid?: string; resource_uuid?: string; message?: string }>;
+  message?: string;
 }
 
 export interface CreateApplicationRequest {
