@@ -81,7 +81,7 @@ beforeEach(() => {
   validate.mockResolvedValue({ ok: true, checks: [], volumes: [], exposure: "internal", defaults: {}, source: SNAPSHOT_WITH_VOL });
 });
 
-describe("migrationOrchestrator.advance — one step at a time", () => {
+describe("migrationOrchestrator.advance - one step at a time", () => {
   it("runs validate, marks it success, and captures the snapshot", async () => {
     store.getJob.mockResolvedValue(jobRow());
     store.getSteps.mockResolvedValue([step("validate"), step("stop_source")]);
@@ -210,6 +210,48 @@ describe("migrationOrchestrator.advance — one step at a time", () => {
       "job-1",
       "provision",
       expect.objectContaining({ status: "running", attemptNumber: 2 }),
+    );
+  });
+
+  it("switch_endpoints calls provider with custom domains (sslip filtered out)", async () => {
+    store.getJob.mockResolvedValue(jobRow({
+      status: "cutting_over",
+      sourceResourceId: "src-1",
+      sourceResourceSnapshot: {
+        volumes: [],
+        domains: ["app.example.com", "abc.10.0.0.5.sslip.io"],
+      },
+    }));
+    store.getSteps.mockResolvedValue([step("switch_endpoints")]);
+    store.getArtifact.mockResolvedValue({ reference: "dest-1" });
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.switchEndpoints).toHaveBeenCalledWith({
+      sourceResourceId: "src-1",
+      destinationResourceId: "dest-1",
+      domains: ["app.example.com"],
+    });
+    expect(store.updateStep).toHaveBeenCalledWith(
+      "job-1",
+      "switch_endpoints",
+      expect.objectContaining({ status: "success" }),
+    );
+  });
+
+  it("switch_endpoints skips provider call when snapshot has only sslip domains", async () => {
+    store.getJob.mockResolvedValue(jobRow({
+      status: "cutting_over",
+      sourceResourceSnapshot: {
+        volumes: [],
+        domains: ["abc.10.0.0.5.sslip.io"],
+      },
+    }));
+    store.getSteps.mockResolvedValue([step("switch_endpoints")]);
+    await migrationOrchestrator.advance("job-1");
+    expect(provider.switchEndpoints).not.toHaveBeenCalled();
+    expect(store.updateStep).toHaveBeenCalledWith(
+      "job-1",
+      "switch_endpoints",
+      expect.objectContaining({ status: "success", detail: "Internal resource: no public domains to move." }),
     );
   });
 });

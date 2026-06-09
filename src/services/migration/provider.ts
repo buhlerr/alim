@@ -3,9 +3,9 @@ import type {
   CreateResourceSpec,
   HostCapacity,
   HostSummary,
-  MigrationJobLike,
   ResourceInfo,
   ResourceSummary,
+  SwitchEndpointsInput,
 } from "./types";
 import { coolifyPlatformProvider } from "./coolify-provider";
 
@@ -25,7 +25,7 @@ export interface PlatformProvider {
   generateValidationUrl(id: string, hostIp: string): Promise<string>;
   stopResource(id: string): Promise<void>;
   startResource(id: string): Promise<void>;
-  switchEndpoints(job: MigrationJobLike): Promise<void>;
+  switchEndpoints(input: SwitchEndpointsInput): Promise<void>;
   deleteResource(id: string): Promise<void>;
 }
 

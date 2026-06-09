@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { PlatformProvider } from "./provider";
-import type { HostSummary, ResourceInfo, ResourceSummary } from "./types";
+import type { HostSummary, ResourceInfo, ResourceSummary, SwitchEndpointsInput } from "./types";
 
 /**
  * Deterministic-shape mock of a Coolify control plane. Returns realistic data
@@ -127,7 +127,7 @@ export const mockCoolifyProvider: PlatformProvider = {
     await delay();
   },
 
-  async switchEndpoints() {
+  async switchEndpoints(_input: SwitchEndpointsInput): Promise<void> {
     await delay();
   },
 

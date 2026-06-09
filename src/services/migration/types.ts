@@ -63,3 +63,10 @@ export interface MigrationJobLike {
   cloudflareEnabled: boolean;
   exposure: Exposure | string;
 }
+
+export interface SwitchEndpointsInput {
+  sourceResourceId: string;
+  destinationResourceId: string;
+  /** Custom (non-sslip) domains to move from source to destination. */
+  domains: string[];
+}

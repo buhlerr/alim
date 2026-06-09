@@ -1,5 +1,5 @@
 import "server-only";
-import { isTerminalStatus } from "@/lib/migration";
+import { isTerminalStatus, isSslipDomain } from "@/lib/migration";
 import { migrationStore, type MigrationJobRow } from "./store";
 import { platformProvider } from "./provider";
 import { volumeTransfer } from "./volume-transfer";
@@ -99,16 +99,19 @@ async function handleValidationUrl(job: MigrationJobRow): Promise<StepOutcome> {
 }
 
 async function handleSwitchEndpoints(job: MigrationJobRow): Promise<StepOutcome> {
+  const snapshot = snapshotOf(job);
+  const custom = (snapshot.domains ?? []).filter((d) => !isSslipDomain(d));
+  if (custom.length === 0) {
+    return { detail: "Internal resource: no public domains to move." };
+  }
+  const art = await migrationStore.getArtifact(job.id, "destination_resource");
+  if (!art) throw new MigrationError("Destination resource not found.", "NO_DESTINATION");
   await platformProvider.switchEndpoints({
-    id: job.id,
     sourceResourceId: job.sourceResourceId,
-    destinationResourceName: job.destinationResourceName,
-    destinationHost: job.destinationHost,
-    npmEnabled: job.npmEnabled,
-    cloudflareEnabled: job.cloudflareEnabled,
-    exposure: job.exposure,
+    destinationResourceId: art.reference,
+    domains: custom,
   });
-  return { detail: "Public endpoints switched to the destination." };
+  return { detail: `Moved ${custom.length} domain(s) to the destination.` };
 }
 
 async function handleDeleteSource(job: MigrationJobRow): Promise<StepOutcome> {

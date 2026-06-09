@@ -7,9 +7,9 @@ import type {
   CreateResourceSpec,
   HostCapacity,
   HostSummary,
-  MigrationJobLike,
   ResourceInfo,
   ResourceSummary,
+  SwitchEndpointsInput,
   VolumeInfo,
 } from "./types";
 
@@ -243,8 +243,13 @@ export const coolifyPlatformProvider: PlatformProvider = {
     await coolifyService.startApplication(id);
   },
 
-  async switchEndpoints(_job: MigrationJobLike): Promise<void> {
-    // Endpoint switching is deferred (roadmap). No-op this phase.
+  async switchEndpoints({ sourceResourceId, destinationResourceId, domains }: SwitchEndpointsInput): Promise<void> {
+    if (domains.length === 0) return;
+    // Release the domains from the source so the destination can claim them,
+    // then assign them to the destination and redeploy so the proxy serves them.
+    await coolifyService.updateApplication(sourceResourceId, { domains: "" });
+    await coolifyService.updateApplication(destinationResourceId, { domains: domains.join(",") });
+    await this.deployResource(destinationResourceId);
   },
 
   async deleteResource(id: string): Promise<void> {

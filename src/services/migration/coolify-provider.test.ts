@@ -251,4 +251,30 @@ describe("coolifyPlatformProvider action methods", () => {
     expect(cs.startApplication).toHaveBeenCalledWith("a1");
     expect(cs.deleteApplication).toHaveBeenCalledWith("a1");
   });
+
+  it("switchEndpoints clears source domains, sets destination domains, and redeploys", async () => {
+    cs.updateApplication.mockResolvedValue(undefined);
+    cs.deploy.mockResolvedValue({ deployments: [{ deployment_uuid: "d1" }] });
+    cs.getDeployment.mockResolvedValue({ status: "finished" });
+
+    await coolifyPlatformProvider.switchEndpoints({
+      sourceResourceId: "src-1",
+      destinationResourceId: "dest-1",
+      domains: ["app.example.com"],
+    });
+
+    expect(cs.updateApplication).toHaveBeenNthCalledWith(1, "src-1", { domains: "" });
+    expect(cs.updateApplication).toHaveBeenNthCalledWith(2, "dest-1", { domains: "app.example.com" });
+    expect(cs.deploy).toHaveBeenCalledWith("dest-1");
+  });
+
+  it("switchEndpoints is a no-op when domains array is empty", async () => {
+    await coolifyPlatformProvider.switchEndpoints({
+      sourceResourceId: "src-1",
+      destinationResourceId: "dest-1",
+      domains: [],
+    });
+    expect(cs.updateApplication).not.toHaveBeenCalled();
+    expect(cs.deploy).not.toHaveBeenCalled();
+  });
 });
