@@ -22,6 +22,8 @@ export interface HostCapacity {
   reachable: boolean;
   freeMemoryMb: number;
   freeDiskMb: number;
+  /** False when metrics are not measured (e.g. API-only, no SSH). */
+  metricsAvailable?: boolean;
 }
 
 export interface VolumeInfo {
