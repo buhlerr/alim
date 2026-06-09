@@ -12,6 +12,8 @@ vi.mock("@/services/coolify/service", () => ({
     listProjects: vi.fn(),
     getProject: vi.fn(),
     createApplication: vi.fn(),
+    createApplicationPrivateGithubApp: vi.fn(),
+    listGithubApps: vi.fn(),
     setEnvVar: vi.fn(),
     setEnvVarsBulk: vi.fn(),
     deploy: vi.fn(),
@@ -132,6 +134,34 @@ describe("coolifyPlatformProvider action methods", () => {
       build_pack: "nixpacks", ports_exposes: "3000", name: "web-copy",
     }));
     expect(cs.setEnvVarsBulk).toHaveBeenCalledWith("dest1", [{ key: "NODE_ENV", value: "production" }]);
+  });
+
+  it("createResource uses the private GitHub App path for a private-repo source", async () => {
+    cs.listGithubApps.mockResolvedValue([
+      { id: 0, uuid: "public-gh", name: "Public GitHub", is_public: true },
+      { id: 1, uuid: "gh-private", name: "my-app", is_public: false },
+    ]);
+    cs.createApplicationPrivateGithubApp.mockResolvedValue({ uuid: "dest1" });
+    cs.setEnvVarsBulk.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: {
+        ...snapshot,
+        buildConfig: {
+          ...snapshot.buildConfig,
+          git_repository: "owner/repo",
+          source_id: 1,
+          source_type: "App\\Models\\GithubApp",
+        },
+      },
+    } as any);
+    expect(cs.createApplicationPrivateGithubApp).toHaveBeenCalledWith(expect.objectContaining({
+      github_app_uuid: "gh-private",
+      git_repository: "owner/repo", // raw owner/repo, not a URL
+      server_uuid: "s2",
+      project_uuid: "p1",
+    }));
+    expect(cs.createApplication).not.toHaveBeenCalled();
   });
 
   it("createResource normalizes an owner/repo git value to a full GitHub URL", async () => {

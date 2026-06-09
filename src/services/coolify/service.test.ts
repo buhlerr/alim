@@ -163,4 +163,25 @@ describe("coolifyService", () => {
     expect(fetchMock).toHaveBeenCalledWith({ path: "/deploy", query: { uuid: "a1" } });
     expect(res.deployments?.[0]?.deployment_uuid).toBe("d1");
   });
+
+  it("listGithubApps GETs /github-apps", async () => {
+    fetchMock.mockResolvedValue([{ id: 1, uuid: "gh1", name: "app", is_public: false }]);
+    await coolifyService.listGithubApps();
+    expect(fetchMock).toHaveBeenCalledWith({ path: "/github-apps" });
+  });
+
+  it("createApplicationPrivateGithubApp POSTs to /applications/private-github-app", async () => {
+    fetchMock.mockResolvedValue({ uuid: "new" });
+    const req = {
+      project_uuid: "p", server_uuid: "s", environment_name: "dev",
+      github_app_uuid: "gh1", git_repository: "owner/repo", git_branch: "main",
+      build_pack: "nixpacks", ports_exposes: "8080", name: "x",
+    };
+    await coolifyService.createApplicationPrivateGithubApp(req);
+    expect(fetchMock).toHaveBeenCalledWith({
+      path: "/applications/private-github-app",
+      method: "POST",
+      body: req,
+    });
+  });
 });

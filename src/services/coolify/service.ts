@@ -7,10 +7,12 @@ import {
   type CoolifyDeployment,
   type CoolifyDeployResponse,
   type CoolifyEnvVar,
+  type CoolifyGithubApp,
   type CoolifyProject,
   type CoolifyServer,
   type CoolifyServerResource,
   type CoolifyStoragesResponse,
+  type CreatePrivateGithubAppRequest,
   type CreateApplicationRequest,
   type UpdateApplicationRequest,
 } from "./types";
@@ -105,6 +107,21 @@ export const coolifyService = {
 
   async listServers(): Promise<CoolifyServer[]> {
     return coolifyFetch<CoolifyServer[]>({ path: "/servers" });
+  },
+
+  async listGithubApps(): Promise<CoolifyGithubApp[]> {
+    return coolifyFetch<CoolifyGithubApp[]>({ path: "/github-apps" });
+  },
+
+  /** Create an app from a private repo via a Coolify GitHub App (carries auth). */
+  async createApplicationPrivateGithubApp(
+    req: CreatePrivateGithubAppRequest,
+  ): Promise<{ uuid: string }> {
+    return coolifyFetch<{ uuid: string }>({
+      path: "/applications/private-github-app",
+      method: "POST",
+      body: req,
+    });
   },
 
   async getServer(uuid: string): Promise<CoolifyServer> {

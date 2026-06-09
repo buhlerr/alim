@@ -47,8 +47,32 @@ export interface CoolifyApplication {
   description?: string | null;
   /** Integer environment id; resolve to project+environment via /projects. */
   environment_id?: number | null;
+  /** Git source binding. source_type "App\\Models\\GithubApp" uses a GitHub App
+   * (source_id -> GET /github-apps) which carries repo auth; a private repo
+   * must be recreated via that app, not the public-repo endpoint. */
+  source_id?: number | null;
+  source_type?: string | null;
   /** Server lives here: destination.server.uuid (no flat server_uuid exists). */
   destination?: CoolifyDestination | null;
+}
+
+export interface CoolifyGithubApp {
+  id: number;
+  uuid: string;
+  name: string;
+  is_public: boolean;
+}
+
+export interface CreatePrivateGithubAppRequest {
+  project_uuid: string;
+  server_uuid: string;
+  environment_name: string;
+  github_app_uuid: string;
+  git_repository: string; // "owner/repo" (not a URL)
+  git_branch: string;
+  build_pack: string;
+  ports_exposes: string;
+  name?: string;
 }
 
 export interface CoolifyEnvVar {

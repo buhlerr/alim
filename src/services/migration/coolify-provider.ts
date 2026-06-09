@@ -106,6 +106,10 @@ export const coolifyPlatformProvider: PlatformProvider = {
         ports_exposes: app.ports_exposes ?? "3000",
         project_uuid: projectUuid,
         environment_name: environmentName,
+        // Git source binding, so a private-repo app is recreated via its
+        // GitHub App rather than the public-repo endpoint (which lacks auth).
+        source_id: app.source_id ?? null,
+        source_type: app.source_type ?? "",
       },
       volumes,
     };
@@ -117,23 +121,49 @@ export const coolifyPlatformProvider: PlatformProvider = {
   },
 
   async createResource(spec: CreateResourceSpec): Promise<{ resourceId: string }> {
-    const cfg = spec.snapshot.buildConfig as Record<string, string>;
-    if (!cfg.project_uuid) {
+    const cfg = spec.snapshot.buildConfig as Record<string, unknown>;
+    const projectUuid = String(cfg.project_uuid ?? "");
+    if (!projectUuid) {
       throw new MigrationError(
         "Cannot infer the destination project for this resource. (Explicit targeting arrives in Phase C.)",
         "INFER_FAILED",
       );
     }
-    const created = await coolifyService.createApplication({
-      project_uuid: cfg.project_uuid,
+    const gitRepo = String(cfg.git_repository ?? "");
+    const sourceId = typeof cfg.source_id === "number" ? cfg.source_id : null;
+    const sourceType = String(cfg.source_type ?? "");
+    const common = {
+      project_uuid: projectUuid,
       server_uuid: spec.destinationHostId,
-      environment_name: cfg.environment_name || "production",
-      git_repository: toGitUrl(cfg.git_repository),
-      git_branch: cfg.git_branch || "main",
-      build_pack: cfg.build_pack || "nixpacks",
-      ports_exposes: cfg.ports_exposes || "3000",
+      environment_name: String(cfg.environment_name || "production"),
+      git_branch: String(cfg.git_branch || "main"),
+      build_pack: String(cfg.build_pack || "nixpacks"),
+      ports_exposes: String(cfg.ports_exposes || "3000"),
       name: spec.name,
-    });
+    };
+
+    // A private repo deployed through a Coolify GitHub App must be recreated via
+    // that app (it carries the git auth). The public-repo endpoint cannot clone
+    // a private repo. Fall back to the public path otherwise.
+    let created: { uuid: string } | null = null;
+    if (/GithubApp/i.test(sourceType) && sourceId != null) {
+      const apps = await coolifyService.listGithubApps();
+      const ghApp = apps.find((a) => a.id === sourceId);
+      if (ghApp && !ghApp.is_public) {
+        created = await coolifyService.createApplicationPrivateGithubApp({
+          ...common,
+          github_app_uuid: ghApp.uuid,
+          git_repository: gitRepo,
+        });
+      }
+    }
+    if (!created) {
+      created = await coolifyService.createApplication({
+        ...common,
+        git_repository: toGitUrl(gitRepo),
+      });
+    }
+
     if (spec.snapshot.envVars.length > 0) {
       // Bulk upsert: POST /envs 409s on keys Coolify auto-creates on the new app.
       await coolifyService.setEnvVarsBulk(created.uuid, spec.snapshot.envVars);
