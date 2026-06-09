@@ -1,9 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { getIntegrationsHealthAction } from "@/app/actions/health";
+import type { IntegrationsHealth } from "@/services/health";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -93,6 +101,102 @@ function formatUptime(total: number): string {
     : `${pad(h)}:${pad(m)}:${pad(sec)}`;
 }
 
+function IntegrationStatusIcon({ ok, configured }: { ok: boolean; configured: boolean }) {
+  if (!configured) {
+    return <span className="h-2 w-2 rounded-full bg-muted-foreground/40 inline-block" />;
+  }
+  if (ok) {
+    return <CheckCircle2 className="h-3.5 w-3.5 text-ok shrink-0" />;
+  }
+  return <XCircle className="h-3.5 w-3.5 text-danger shrink-0" />;
+}
+
+function HostStatusIcon({ reachable }: { reachable: boolean }) {
+  if (reachable) {
+    return <CheckCircle2 className="h-3.5 w-3.5 text-ok shrink-0" />;
+  }
+  return <XCircle className="h-3.5 w-3.5 text-danger shrink-0" />;
+}
+
+function IntegrationsHealthPopover({ children }: { children: React.ReactNode }) {
+  const [data, setData] = React.useState<IntegrationsHealth | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await getIntegrationsHealthAction();
+      setData(result);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) {
+        load();
+      }
+    },
+    [load],
+  );
+
+  return (
+    <Popover onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent className="w-96 p-4">
+        <div className="mb-3">
+          <p className="text-sm font-semibold leading-none">Integration health</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Live status of connected services and hosts.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {loading && !data ? (
+              <p className="text-xs text-muted-foreground">Checking...</p>
+            ) : data ? (
+              data.integrations.map((integration) => (
+                <div key={integration.key} className="flex items-center gap-2">
+                  <IntegrationStatusIcon ok={integration.ok} configured={integration.configured} />
+                  <span className="text-sm font-medium w-36 shrink-0">{integration.label}</span>
+                  <span className="text-xs text-muted-foreground flex-1 min-w-0 break-words">{integration.detail}</span>
+                </div>
+              ))
+            ) : null}
+          </div>
+
+          {data && data.hosts.length > 0 && (
+            <div className="space-y-2 border-t pt-3">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 font-mono">Hosts</p>
+              {data.hosts.map((host) => (
+                <div key={host.name} className="flex items-center gap-2">
+                  <HostStatusIcon reachable={host.reachable} />
+                  <span className="text-sm">{host.name}</span>
+                  <span className="text-xs text-muted-foreground">{host.reachable ? "Reachable" : "Unreachable"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end border-t pt-3">
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
  * Global command bar shown above page content on desktop. Carries the live
  * system clock (click to toggle 12h/24h), the real server uptime + a
@@ -144,12 +248,16 @@ export function AppBar() {
         </button>
       </div>
 
-      <div
-        className={`flex items-center gap-2 border ${statusTone} bg-secondary/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em]`}
-      >
-        <span className={`h-[7px] w-[7px] rounded-full ${dotTone} ${isDown ? "" : "animate-pulse"}`} />
-        {statusLabel}
-      </div>
+      <IntegrationsHealthPopover>
+        <button
+          type="button"
+          title="View integration health"
+          className={`flex items-center gap-2 border ${statusTone} bg-secondary/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] cursor-pointer hover:bg-secondary/70 transition-colors`}
+        >
+          <span className={`h-[7px] w-[7px] rounded-full ${dotTone} ${isDown ? "" : "animate-pulse"}`} />
+          {statusLabel}
+        </button>
+      </IntegrationsHealthPopover>
 
       <ThemeToggle />
     </header>
