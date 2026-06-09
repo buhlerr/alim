@@ -25,6 +25,17 @@ export interface CoolifyServer {
   ip?: string | null;
   description?: string | null;
   settings?: CoolifyServerSettings;
+  port?: number | null;
+  user?: string | null;
+  private_key_id?: number | null;
+}
+
+export interface CoolifySecurityKey {
+  id: number;
+  uuid: string;
+  name: string;
+  private_key?: string;
+  is_git_related?: boolean;
 }
 
 export interface CoolifyDestination {

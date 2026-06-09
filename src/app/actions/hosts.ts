@@ -8,6 +8,7 @@ import { coolifyService } from "@/services/coolify/service";
 import { auditService } from "@/services/audit";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 import type { ActionResult } from "./secrets";
+import { mapServersToCredentials, type ImportSkip } from "./hosts-import";
 
 // Re-export the shape so consumers have a single import point.
 export type { ActionResult };
@@ -117,6 +118,43 @@ export async function saveHostCredentialAction(input: unknown): Promise<ActionRe
     return { ok: true };
   } catch {
     return { ok: false, error: "Could not save the host credential." };
+  }
+}
+
+export async function importCoolifyHostCredentialsAction(): Promise<
+  ActionResult<{ imported: number; skipped: ImportSkip[] }>
+> {
+  try {
+    const [keys, servers] = await Promise.all([
+      coolifyService.listSecurityKeys(),
+      coolifyService.listServers(),
+    ]);
+
+    const keysById = new Map(keys.map((k) => [k.id, k]));
+
+    const serversDetail = await Promise.all(
+      servers.map((s) => coolifyService.getServer(s.uuid)),
+    );
+
+    const { credentials, skipped } = mapServersToCredentials(serversDetail, keysById);
+
+    for (const { input } of credentials) {
+      await hostCredentialsService.upsertForServer(input);
+    }
+
+    const imported = credentials.length;
+
+    await auditService.record({
+      action: AUDIT_ACTIONS.HOST_CREDENTIAL_SAVE,
+      summary: `Imported ${imported} host credential${imported === 1 ? "" : "s"} from Coolify`,
+      targetType: AUDIT_TARGET_TYPES.HOST_CREDENTIAL,
+      metadata: { imported, skippedCount: skipped.length },
+    });
+
+    revalidatePath("/hosts");
+    return { ok: true, data: { imported, skipped } };
+  } catch {
+    return { ok: false, error: "Could not import host credentials from Coolify." };
   }
 }
 
