@@ -80,3 +80,24 @@ export function defaultFlags(exposure: Exposure): ExposureDefaults {
 export function buildSslipUrl(subdomain: string, hostIp: string): string {
   return `https://${subdomain}.${hostIp}.sslip.io`;
 }
+
+/**
+ * Return a snapshot with optional project/environment overrides applied to
+ * `buildConfig`. When neither override is provided the snapshot is returned
+ * unchanged (same reference).
+ */
+export function applyDestinationOverride<T extends { buildConfig: Record<string, unknown> }>(
+  snapshot: T,
+  projectUuid?: string,
+  envName?: string,
+): T {
+  if (!projectUuid && !envName) return snapshot;
+  return {
+    ...snapshot,
+    buildConfig: {
+      ...snapshot.buildConfig,
+      ...(projectUuid ? { project_uuid: projectUuid } : {}),
+      ...(envName ? { environment_name: envName } : {}),
+    },
+  };
+}

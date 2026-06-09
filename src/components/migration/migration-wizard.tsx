@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type {
   MigrationOptions,
   MigrationPreview,
+  MigrationProjectOption,
 } from "@/app/actions/migration";
 import {
   validateMigrationAction,
@@ -42,6 +43,8 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
   const [preview, setPreview] = React.useState<MigrationPreview | null>(null);
   const [npmEnabled, setNpmEnabled] = React.useState(false);
   const [cloudflareEnabled, setCloudflareEnabled] = React.useState(false);
+  const [destProject, setDestProject] = React.useState("");
+  const [destEnv, setDestEnv] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
   const source = options.resources.find((r) => r.id === sourceResourceId);
@@ -70,6 +73,8 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
     setPreview(res.data);
     setNpmEnabled(res.data.report.defaults.npmEnabled);
     setCloudflareEnabled(res.data.report.defaults.cloudflareEnabled);
+    setDestProject(String(res.data.report.source.buildConfig.project_uuid ?? ""));
+    setDestEnv(String(res.data.report.source.buildConfig.environment_name ?? ""));
   }
 
   async function execute() {
@@ -81,6 +86,8 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
       destinationResourceName,
       npmEnabled,
       cloudflareEnabled,
+      destinationProjectUuid: destProject || undefined,
+      destinationEnvironmentName: destEnv || undefined,
     });
     setBusy(false);
     if (!res.ok || !res.data) {
@@ -212,6 +219,15 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
                 </label>
               </div>
             ) : null}
+            {validationOk && options.projects.length > 0 ? (
+              <DestinationProjectEnvPicker
+                projects={options.projects}
+                destProject={destProject}
+                destEnv={destEnv}
+                onProjectChange={(uuid) => { setDestProject(uuid); setDestEnv(""); }}
+                onEnvChange={setDestEnv}
+              />
+            ) : null}
             <Button disabled={!validationOk || busy} onClick={execute}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {migrationType === "clone" ? "Clone" : "Migrate"}
@@ -224,5 +240,52 @@ export function MigrationWizard({ options }: { options: MigrationOptions }) {
       ) : null}
 
     </div>
+  );
+}
+
+function DestinationProjectEnvPicker({
+  projects,
+  destProject,
+  destEnv,
+  onProjectChange,
+  onEnvChange,
+}: {
+  projects: MigrationProjectOption[];
+  destProject: string;
+  destEnv: string;
+  onProjectChange: (uuid: string) => void;
+  onEnvChange: (name: string) => void;
+}) {
+  const selected = projects.find((p) => p.uuid === destProject);
+  return (
+    <details className="pt-2">
+      <summary className="cursor-pointer text-sm text-muted-foreground select-none">
+        Destination project and environment (advanced)
+      </summary>
+      <div className="mt-2 space-y-2">
+        <div className="space-y-1">
+          <Label>Project</Label>
+          <Select value={destProject} onValueChange={onProjectChange}>
+            <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+            <SelectContent>
+              {projects.map((p) => (
+                <SelectItem key={p.uuid} value={p.uuid}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Environment</Label>
+          <Select value={destEnv} onValueChange={onEnvChange} disabled={!selected}>
+            <SelectTrigger><SelectValue placeholder="Select environment" /></SelectTrigger>
+            <SelectContent>
+              {(selected?.environments ?? []).map((e) => (
+                <SelectItem key={e.uuid} value={e.name}>{e.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </details>
   );
 }

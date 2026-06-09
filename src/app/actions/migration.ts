@@ -10,8 +10,9 @@ import { approvalService } from "@/services/migration/approval";
 import { validationService, type ValidationReport } from "@/services/migration/validation";
 import { platformProvider } from "@/services/migration/provider";
 import { buildPlan, type StepDef } from "@/services/migration/planner";
-import { defaultFlags, isTerminalStatus, type MigrationType } from "@/lib/migration";
+import { applyDestinationOverride, defaultFlags, isTerminalStatus, type MigrationType } from "@/lib/migration";
 import type { HostCapacity, HostSummary, ResourceSummary } from "@/services/migration/types";
+import { coolifyService } from "@/services/coolify/service";
 import { auditService } from "@/services/audit";
 import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "@/lib/audit";
 
@@ -26,21 +27,39 @@ export interface MigrationHostInfo extends HostSummary {
   capacity: HostCapacity;
 }
 
+export interface MigrationProjectOption {
+  uuid: string;
+  name: string;
+  environments: { uuid: string; name: string }[];
+}
+
 export interface MigrationOptions {
   resources: ResourceSummary[];
   hosts: MigrationHostInfo[];
+  projects: MigrationProjectOption[];
 }
 
 /** Wizard data: candidate resources + destination hosts with capacities. */
 export async function getMigrationOptionsAction(): Promise<MigrationOptions> {
-  const [resources, hosts] = await Promise.all([
+  const [resources, hosts, projectList] = await Promise.all([
     platformProvider.listResources(),
     platformProvider.listHosts(),
+    coolifyService.listProjects(),
   ]);
   const hostInfos = await Promise.all(
     hosts.map(async (h) => ({ ...h, capacity: await platformProvider.getHostCapacity(h.id) })),
   );
-  return { resources, hosts: hostInfos };
+  const projects = await Promise.all(
+    projectList.map(async (p) => {
+      const detail = await coolifyService.getProject(p.uuid);
+      return {
+        uuid: p.uuid,
+        name: p.name,
+        environments: (detail.environments ?? []).map((e) => ({ uuid: e.uuid, name: e.name })),
+      };
+    }),
+  );
+  return { resources, hosts: hostInfos, projects };
 }
 
 export interface MigrationPreview {
@@ -90,6 +109,11 @@ export async function createMigrationAction(
   const hosts = await platformProvider.listHosts();
   const destHost = hosts.find((h) => h.id === data.destinationHost);
   const fallback = defaultFlags(report.exposure);
+  const sourceResourceSnapshot = applyDestinationOverride(
+    report.source,
+    data.destinationProjectUuid,
+    data.destinationEnvironmentName,
+  );
 
   const job = await migrationStore.createJob({
     migrationType: data.migrationType,
@@ -103,7 +127,7 @@ export async function createMigrationAction(
     exposure: report.exposure,
     npmEnabled: data.npmEnabled ?? fallback.npmEnabled,
     cloudflareEnabled: data.cloudflareEnabled ?? fallback.cloudflareEnabled,
-    sourceResourceSnapshot: report.source,
+    sourceResourceSnapshot,
   });
 
   await auditService.record({
