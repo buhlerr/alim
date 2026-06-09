@@ -18,7 +18,6 @@ import {
   Rocket,
   KeyRound,
   ScrollText,
-  Server,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,16 +117,6 @@ export const MODULES: AppModule[] = [
     status: "available",
     group: "infrastructure",
     nav: [{ href: "/migrations", label: "Migrations", icon: ArrowLeftRight }],
-  },
-  {
-    id: "hosts",
-    name: "Hosts",
-    description: "SSH credentials for migration volume transfer, stored encrypted per host.",
-    icon: Server,
-    href: "/hosts",
-    status: "available",
-    group: "infrastructure",
-    nav: [{ href: "/hosts", label: "Hosts", icon: Server }],
   },
   {
     id: "secrets",
