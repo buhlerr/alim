@@ -133,6 +133,18 @@ describe("coolifyPlatformProvider action methods", () => {
     expect(cs.setEnvVar).toHaveBeenCalledWith("dest1", "NODE_ENV", "production");
   });
 
+  it("createResource normalizes an owner/repo git value to a full GitHub URL", async () => {
+    cs.createApplication.mockResolvedValue({ uuid: "dest1" });
+    cs.setEnvVar.mockResolvedValue(undefined);
+    await coolifyPlatformProvider.createResource({
+      name: "web-copy", destinationHostId: "s2",
+      snapshot: { ...snapshot, buildConfig: { ...snapshot.buildConfig, git_repository: "aasimenator/aspyrelabs-web" } },
+    } as any);
+    expect(cs.createApplication).toHaveBeenCalledWith(expect.objectContaining({
+      git_repository: "https://github.com/aasimenator/aspyrelabs-web",
+    }));
+  });
+
   it("createResource throws when project cannot be inferred", async () => {
     await expect(coolifyPlatformProvider.createResource({
       name: "web-copy", destinationHostId: "s2",

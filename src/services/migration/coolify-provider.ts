@@ -21,6 +21,19 @@ function splitDomains(fqdn: string | null | undefined): string[] {
   return fqdn.split(",").map((d) => d.trim()).filter(Boolean);
 }
 
+/**
+ * Coolify stores public-repo apps as "owner/repo" but POST /applications/public
+ * requires a full URL (must start with https://, http://, git://, or git@).
+ * Short forms are assumed to be GitHub.com (matching Coolify's default public
+ * source). Already-qualified URLs pass through unchanged.
+ */
+function toGitUrl(repo: string | null | undefined): string {
+  const r = (repo ?? "").trim();
+  if (!r) return r;
+  if (/^(https?:\/\/|git:\/\/|git@)/i.test(r)) return r;
+  return `https://github.com/${r}`;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -115,7 +128,7 @@ export const coolifyPlatformProvider: PlatformProvider = {
       project_uuid: cfg.project_uuid,
       server_uuid: spec.destinationHostId,
       environment_name: cfg.environment_name || "production",
-      git_repository: cfg.git_repository,
+      git_repository: toGitUrl(cfg.git_repository),
       git_branch: cfg.git_branch || "main",
       build_pack: cfg.build_pack || "nixpacks",
       ports_exposes: cfg.ports_exposes || "3000",
