@@ -144,7 +144,7 @@ function IntegrationsHealthPopover({ children }: { children: React.ReactNode }) 
   return (
     <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-80 p-4">
+      <PopoverContent className="w-96 p-4">
         <div className="mb-3">
           <p className="text-sm font-semibold leading-none">Integration health</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -160,8 +160,8 @@ function IntegrationsHealthPopover({ children }: { children: React.ReactNode }) 
               data.integrations.map((integration) => (
                 <div key={integration.key} className="flex items-center gap-2">
                   <IntegrationStatusIcon ok={integration.ok} configured={integration.configured} />
-                  <span className="text-sm font-medium w-40 shrink-0">{integration.label}</span>
-                  <span className="text-xs text-muted-foreground truncate">{integration.detail}</span>
+                  <span className="text-sm font-medium w-36 shrink-0">{integration.label}</span>
+                  <span className="text-xs text-muted-foreground flex-1 min-w-0 break-words">{integration.detail}</span>
                 </div>
               ))
             ) : null}
