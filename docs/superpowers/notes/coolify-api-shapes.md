@@ -223,3 +223,125 @@ No live storage entries were captured to confirm field names — the above is in
 | `app.git_branch` | `git_branch` | `git_branch` | None — confirmed |
 | storages wrapper | flat array | `{ persistent_storages, file_storages }` | Update storage fetch to unwrap the object |
 | `validate` HTTP status | assumed 200 | **201** | Handle 201 as success |
+
+---
+
+## Project / environment resolution
+
+**Date:** 2026-06-09
+**Status:** CONFIRMED via live API — all calls succeeded.
+
+### The problem
+
+An application object carries only `environment_id` (an integer). It has **no** `project_uuid`, **no** `environment_name`, and **no** `server_uuid` at the top level. Given a source app's `environment_id`, the migration must resolve its containing project UUID and environment name in order to create the destination copy inside the same project + environment.
+
+### Resolution algorithm (confirmed with live data)
+
+```
+1. GET /api/v1/projects
+   → returns array of { id, uuid, name, description }
+   → environments are NOT embedded (environments field absent in list response)
+
+2. For each project in the list:
+   GET /api/v1/projects/{project.uuid}
+   → returns { id, uuid, name, description, team_id, created_at, updated_at, environments[] }
+   → environments[] items: { id, name, project_id, created_at, updated_at, description, uuid }
+
+3. Find the environment where environment.id === app.environment_id
+   → that environment's parent project.uuid  = the project_uuid
+   → that environment.name                   = the environment name
+   → that environment.uuid                   = the environment uuid (needed for some API calls)
+```
+
+**Confirmed live cross-reference (all 12 apps, 4 projects, 8 environment rows):**
+
+| env_id | env_name | env_uuid | project_uuid | project_name |
+|--------|----------|----------|--------------|--------------|
+| 3 | prod | qps5bd0g2g22lbjkd1rgoq7r | nub0mqi0hqp26dwfke6s2sea | aspyre-labs-internal |
+| 4 | dev | u1usf18bi45zpqaduid5ooav | nub0mqi0hqp26dwfke6s2sea | aspyre-labs-internal |
+| 5 | stg | i1ys7uo82z44gri7i6ty0eze | nub0mqi0hqp26dwfke6s2sea | aspyre-labs-internal |
+| 6 | prod | miosuiutax41kcd7fhta9ee6 | vwx6p1lsw50zfqv0vlflqhkq | aspyre-labs-external-prod |
+| 7 | dev | lv3008qolyqhdkr5uky1no6n | sdvwyfrwn895sl6xs3ee6fgp | aspyre-labs-external-dev |
+| 8 | prod | tmh0zxoh3dy7qxah60ucqmsc | hcxbz95nfpwx44t5qdi0qbn8 | personal |
+
+**No simpler path exists.** There is no reverse-lookup endpoint like `GET /environments/{id}`. The only way to resolve from `environment_id` to project is to iterate all projects and their detail responses.
+
+### Field name summary for resolution code
+
+| Step | Endpoint | Match field | Extract fields |
+|------|----------|-------------|----------------|
+| List projects | `GET /projects` | — | `project.uuid`, `project.name` |
+| Get project detail | `GET /projects/{project.uuid}` | `environment.id === app.environment_id` | `project.uuid`, `environment.name`, `environment.uuid` |
+| Alternative (sparse) | `GET /projects/{project.uuid}/environments` | `environment.id === app.environment_id` | `environment.id`, `environment.uuid`, `environment.name` only — no `project_id` |
+
+**Note:** `GET /projects/{uuid}/environments` returns a smaller shape `{ id, uuid, name }` — it omits `project_id`, `created_at`, `updated_at`, `description`. The detail endpoint `GET /projects/{uuid}` returns the full shape including `project_id` (integer). Either endpoint works for the lookup since you already know `project.uuid` from the outer loop.
+
+---
+
+## `destination` subtree shape (confirmed)
+
+Present on every application object in both list (`GET /applications`) and detail (`GET /applications/{uuid}`) responses.
+
+```
+destination.id            number   — e.g. 1
+destination.uuid          string   — e.g. "g8qkdb521x7flolt27bczwh6"
+destination.name          string   — e.g. "coolify"
+destination.network       string   — e.g. "coolify"  (Docker network name)
+destination.server_id     number   — integer FK to server
+destination.created_at    string
+destination.updated_at    string
+destination.server        object   — FULL server object inline (see Server fields above)
+  destination.server.uuid   string
+  destination.server.name   string
+  destination.server.ip     string
+  (+ all other server fields)
+```
+
+**Key:** `destination.uuid` is the `StandaloneDocker` destination UUID (NOT the server UUID). When creating a new application on a specific server via `POST /applications`, Coolify requires either `server_uuid` + `project_uuid` + `environment_name` **or** the destination uuid — exact required body fields need to be verified against the Coolify OpenAPI spec. The `destination.network` field (`"coolify"`) is the Docker network name and is likely required or defaulted when creating a new app on a given server.
+
+---
+
+## `GET /deployments` — item shape and status vocabulary
+
+**Live result:** `GET /api/v1/deployments` returned HTTP 200 with an **empty array `[]`** — this Coolify instance has no deployment history recorded (apps are running but were deployed before the API was set up or history was cleared).
+
+**No live deployment items were captured.** `GET /applications/{uuid}/deployments` returned HTTP 404 (not a valid endpoint on this Coolify version).
+
+### Expected schema (from Coolify OpenAPI documentation, not live-confirmed)
+
+```
+deployment_uuid      string   — unique deployment identifier (NOT "uuid")
+application_uuid     string   — which app was deployed
+status               string   — see vocabulary below
+commit_message       string
+branch               string
+created_at           string
+updated_at           string
+logs                 string   — streaming/stored build logs (may be large)
+```
+
+### Status vocabulary (from Coolify source / docs — not live-observed)
+
+```
+queued       — waiting in queue
+in_progress  — currently running
+finished     — completed successfully
+failed       — build or deploy failed
+cancelled    — manually cancelled
+```
+
+**Cannot confirm field names or status values from live data** — the instance has zero deployment records. The field names `deployment_uuid` and `application_uuid` appear in Coolify's OpenAPI spec but were not live-verified here. When live deployments are available, re-run `GET /deployments` and confirm.
+
+---
+
+## POST-time destination/network uuid requirement
+
+**Finding:** When creating a new application (`POST /applications`), Coolify's required body likely includes:
+- `server_uuid` — the target server's UUID (from `destination.server.uuid`)
+- `project_uuid` — resolved via the algorithm above
+- `environment_name` — resolved via the algorithm above (Coolify's POST endpoint uses the **name** string, not the environment integer id)
+- `destination_uuid` — the `StandaloneDocker` destination UUID on the target server (NOT required if only one destination exists per server, but safest to provide)
+
+The `destination.uuid` (`g8qkdb521x7flolt27bczwh6` on host-01, named "coolify") is what connects a server to its Docker network. Each server typically has one `StandaloneDocker` destination. To create an app on a different server, you must obtain that server's `destination.uuid` — which can be found via `GET /servers/{uuid}/destinations` or by looking at an existing app on that server.
+
+**`GET /projects/{uuid}/environments` does NOT return resources** — the array items contain only `{ id, uuid, name }`. Resources (apps, services, databases) are not embedded in the environments list endpoint.
