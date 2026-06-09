@@ -6,12 +6,10 @@ import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { getIntegrationsHealthAction } from "@/app/actions/health";
 import type { IntegrationsHealth } from "@/services/health";
 
@@ -120,7 +118,7 @@ function HostStatusIcon({ reachable }: { reachable: boolean }) {
   return <XCircle className="h-3.5 w-3.5 text-danger shrink-0" />;
 }
 
-function IntegrationsHealthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function IntegrationsHealthPopover({ children }: { children: React.ReactNode }) {
   const [data, setData] = React.useState<IntegrationsHealth | null>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -134,21 +132,25 @@ function IntegrationsHealthDialog({ open, onOpenChange }: { open: boolean; onOpe
     }
   }, []);
 
-  React.useEffect(() => {
-    if (open) {
-      load();
-    }
-  }, [open, load]);
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) {
+        load();
+      }
+    },
+    [load],
+  );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Integration health</DialogTitle>
-          <DialogDescription>
+    <Popover onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent className="w-80 p-4">
+        <div className="mb-3">
+          <p className="text-sm font-semibold leading-none">Integration health</p>
+          <p className="mt-1 text-xs text-muted-foreground">
             Live status of connected services and hosts.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -190,8 +192,8 @@ function IntegrationsHealthDialog({ open, onOpenChange }: { open: boolean; onOpe
             </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -204,7 +206,6 @@ export function AppBar() {
   const now = useNow();
   const health = useHealth();
   const [hour12, setHour12] = React.useState(true); // default to AM/PM
-  const [dialogOpen, setDialogOpen] = React.useState(false);
 
   const isOk = health?.status === "ok";
   const isDown = health?.status === "degraded";
@@ -247,17 +248,16 @@ export function AppBar() {
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setDialogOpen(true)}
-        title="View integration health"
-        className={`flex items-center gap-2 border ${statusTone} bg-secondary/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] cursor-pointer hover:bg-secondary/70 transition-colors`}
-      >
-        <span className={`h-[7px] w-[7px] rounded-full ${dotTone} ${isDown ? "" : "animate-pulse"}`} />
-        {statusLabel}
-      </button>
-
-      <IntegrationsHealthDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <IntegrationsHealthPopover>
+        <button
+          type="button"
+          title="View integration health"
+          className={`flex items-center gap-2 border ${statusTone} bg-secondary/40 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] cursor-pointer hover:bg-secondary/70 transition-colors`}
+        >
+          <span className={`h-[7px] w-[7px] rounded-full ${dotTone} ${isDown ? "" : "animate-pulse"}`} />
+          {statusLabel}
+        </button>
+      </IntegrationsHealthPopover>
 
       <ThemeToggle />
     </header>
