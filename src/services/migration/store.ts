@@ -84,6 +84,18 @@ export const migrationStore = {
     return prisma.migrationJob.findMany({ orderBy: { createdAt: "desc" } });
   },
 
+  /**
+   * Delete finished jobs (completed/failed/rolled_back). In-progress jobs are
+   * left alone since they may still own live resources. Steps/logs/artifacts
+   * cascade. Returns the number of jobs removed.
+   */
+  async deleteTerminalJobs(): Promise<number> {
+    const res = await prisma.migrationJob.deleteMany({
+      where: { status: { in: ["completed", "failed", "rolled_back"] } },
+    });
+    return res.count;
+  },
+
   async updateJob(id: string, patch: Prisma.MigrationJobUpdateInput): Promise<MigrationJob> {
     return prisma.migrationJob.update({ where: { id }, data: patch });
   },

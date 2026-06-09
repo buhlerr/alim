@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    migrationJob: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    migrationJob: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
     migrationStep: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     migrationLog: { create: vi.fn() },
     migrationArtifact: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
@@ -50,5 +50,16 @@ describe("migrationStore.createJob", () => {
       "delete_source",
       "complete",
     ]);
+  });
+});
+
+describe("migrationStore.deleteTerminalJobs", () => {
+  it("deletes only completed/failed/rolled_back jobs and returns the count", async () => {
+    job.deleteMany.mockResolvedValue({ count: 3 });
+    const n = await migrationStore.deleteTerminalJobs();
+    expect(n).toBe(3);
+    expect(job.deleteMany).toHaveBeenCalledWith({
+      where: { status: { in: ["completed", "failed", "rolled_back"] } },
+    });
   });
 });

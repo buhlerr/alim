@@ -54,6 +54,7 @@ export const AUDIT_ACTIONS = {
   MIGRATION_APPROVE: "migration.approve",
   MIGRATION_ROLLBACK: "migration.rollback",
   MIGRATION_COMPLETE: "migration.complete",
+  MIGRATION_CLEAR: "migration.clear",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -129,6 +130,7 @@ export function actionLabel(action: string): string {
     [AUDIT_ACTIONS.MIGRATION_APPROVE]: "Approved migration cutover",
     [AUDIT_ACTIONS.MIGRATION_ROLLBACK]: "Rolled back migration",
     [AUDIT_ACTIONS.MIGRATION_COMPLETE]: "Completed migration",
+    [AUDIT_ACTIONS.MIGRATION_CLEAR]: "Cleared finished migrations",
   };
   return labels[action] ?? action;
 }

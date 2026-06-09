@@ -182,3 +182,15 @@ export async function rollbackMigrationAction(
   const job = await migrationStore.getJobWithRelations(jobId);
   return { ok: true, data: job! };
 }
+
+/** Remove finished migrations (completed/failed/rolled_back) from the list. */
+export async function clearMigrationsAction(): Promise<ActionResult<{ deleted: number }>> {
+  const deleted = await migrationStore.deleteTerminalJobs();
+  await auditService.record({
+    action: AUDIT_ACTIONS.MIGRATION_CLEAR,
+    targetType: AUDIT_TARGET_TYPES.MIGRATION,
+    summary: `Cleared ${deleted} finished migration${deleted === 1 ? "" : "s"}`,
+  });
+  revalidatePath("/migrations");
+  return { ok: true, data: { deleted } };
+}
