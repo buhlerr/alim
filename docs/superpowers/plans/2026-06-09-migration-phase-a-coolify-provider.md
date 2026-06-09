@@ -21,6 +21,17 @@
 
 ---
 
+## Recon corrections (Task 1 findings; these SUPERSEDE the assumptions in Tasks 2 to 6)
+
+Live recon showed the Coolify shapes differ from the assumptions below. Apply these corrections; the corrected code is delivered in the execution prompts and in `docs/superpowers/notes/coolify-api-shapes.md`.
+
+1. Server reference is nested: an application's server is `app.destination.server.uuid` (and `.name`, `.ip`, `.settings.is_reachable`). There is no flat `app.server_uuid`.
+2. No `app.project_uuid` and no `app.environment_name`. The app has only `environment_id` (integer). Resolve project plus environment by: `GET /projects`, then `GET /projects/{uuid}` for each, finding the environment whose `id === app.environment_id`; that yields `project.uuid` and `environment.name`. This resolution runs in `inspectResource` and is frozen into the snapshot, so `createResource` still reads `buildConfig.project_uuid` and `buildConfig.environment_name`.
+3. `GET /servers/{uuid}/validate` is an ASYNC trigger (HTTP 201, "Validation started."), not a reachability check. Do NOT use it for `getHostCapacity`. Read reachability from `GET /servers/{uuid}` -> `settings.is_reachable`. Drop the `validateServer` method; add `getProject`.
+4. `GET /applications/{uuid}/storages` returns `{ persistent_storages: [], file_storages: [] }`. Read `persistent_storages` for volumes.
+5. `POST /applications/public` with `server_uuid` does not require a destination/network uuid (the deployment module already creates apps this way); Coolify uses the server's default destination.
+6. `/deployments` was empty on this instance, so the deployment item shape (`deployment_uuid`, `status`: queued/in_progress/finished/failed/cancelled) is per the OpenAPI spec and must be confirmed during the Task 7 live smoke test; keep status matching defensive.
+
 ## Task 1: Live Coolify reconnaissance (read-only, no production code)
 
 **Files:**
