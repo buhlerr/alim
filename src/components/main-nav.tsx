@@ -15,6 +15,7 @@ import {
   Settings,
   KeyRound,
   ScrollText,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ const SIDEBAR: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/deploy", label: "Deploy", icon: Rocket },
+      { href: "/docs", label: "Docs", icon: BookOpen },
     ],
   },
   {
