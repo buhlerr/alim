@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { getCurrentActor } from "@/lib/auth/server";
 import type { Environment } from "@/lib/targets";
 import type { ProvisionedDatabase } from "@prisma/client";
 
@@ -28,7 +29,10 @@ export const registryService = {
    */
   async record(input: RecordInput): Promise<ProvisionedDatabase> {
     const createdBy =
-      input.createdBy || process.env.PROVISIONED_BY || "internal-admin";
+      input.createdBy ||
+      (await getCurrentActor()) ||
+      process.env.PROVISIONED_BY ||
+      "internal-admin";
     return prisma.provisionedDatabase.upsert({
       where: {
         env_host_db: {

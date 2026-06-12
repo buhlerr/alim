@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma, AuditLog as AuditLogRow } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getCurrentActor } from "@/lib/auth/server";
 
 export type { AuditLogRow };
 
@@ -33,9 +34,17 @@ export interface AuditListFilters {
 
 const DEFAULT_LIMIT = 200;
 
-/** The configured single-admin identity (no per-user auth exists). */
-export function getActor(): string {
-  return process.env.PROVISIONED_BY?.trim() || "internal-admin";
+/**
+ * The actor to attribute an action to. Prefers the authenticated user resolved
+ * by the auth gate; falls back to PROVISIONED_BY (non-request contexts such as
+ * scripts), then a static default.
+ */
+export async function getActor(): Promise<string> {
+  return (
+    (await getCurrentActor()) ||
+    process.env.PROVISIONED_BY?.trim() ||
+    "internal-admin"
+  );
 }
 
 export const auditService = {
@@ -43,7 +52,7 @@ export const auditService = {
     try {
       await prisma.auditLog.create({
         data: {
-          actor: event.actor ?? getActor(),
+          actor: event.actor ?? (await getActor()),
           action: event.action,
           summary: event.summary,
           targetType: event.targetType ?? null,

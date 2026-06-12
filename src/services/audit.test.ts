@@ -9,27 +9,40 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentActor: vi.fn(),
+}));
+
 import { prisma } from "@/lib/prisma";
+import { getCurrentActor } from "@/lib/auth/server";
 import { auditService, getActor } from "./audit";
 
 const auditLog = prisma.auditLog as unknown as {
   create: ReturnType<typeof vi.fn>;
   findMany: ReturnType<typeof vi.fn>;
 };
+const currentActor = getCurrentActor as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.PROVISIONED_BY;
+  currentActor.mockResolvedValue(null); // no request context by default
 });
 
 describe("getActor", () => {
-  it("falls back to internal-admin when PROVISIONED_BY is unset", () => {
-    expect(getActor()).toBe("internal-admin");
+  it("prefers the authenticated user from the request", async () => {
+    currentActor.mockResolvedValue("alice@example.com");
+    process.env.PROVISIONED_BY = "ignored";
+    expect(await getActor()).toBe("alice@example.com");
   });
 
-  it("honors PROVISIONED_BY", () => {
+  it("falls back to PROVISIONED_BY when there is no authenticated user", async () => {
     process.env.PROVISIONED_BY = "aasim";
-    expect(getActor()).toBe("aasim");
+    expect(await getActor()).toBe("aasim");
+  });
+
+  it("falls back to internal-admin when nothing is configured", async () => {
+    expect(await getActor()).toBe("internal-admin");
   });
 });
 

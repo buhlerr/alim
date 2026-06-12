@@ -3,10 +3,10 @@ import { Chakra_Petch, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 import { BRAND } from "@/lib/brand";
-import { MainNav, MobileNav } from "@/components/main-nav";
-import { AppBar } from "@/components/app-bar";
+import { AppShell } from "@/components/app-shell";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { getCurrentActor } from "@/lib/auth/server";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -34,9 +34,10 @@ export const metadata: Metadata = {
   description: BRAND.tagline,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const user = await getCurrentActor();
   return (
     <html
       lang="en"
@@ -45,16 +46,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
-          <div className="flex min-h-screen">
-            <MainNav />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <AppBar />
-              <MobileNav />
-              <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-                <div className="mx-auto w-full max-w-6xl">{children}</div>
-              </main>
-            </div>
-          </div>
+          <AppShell user={user}>{children}</AppShell>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

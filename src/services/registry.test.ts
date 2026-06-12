@@ -10,7 +10,12 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentActor: vi.fn(),
+}));
+
 import { prisma } from "@/lib/prisma";
+import { getCurrentActor } from "@/lib/auth/server";
 import { registryService } from "./registry";
 
 const db = prisma.provisionedDatabase as unknown as {
@@ -18,10 +23,12 @@ const db = prisma.provisionedDatabase as unknown as {
   findMany: ReturnType<typeof vi.fn>;
   upsert: ReturnType<typeof vi.fn>;
 };
+const currentActor = getCurrentActor as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.PROVISIONED_BY;
+  currentActor.mockResolvedValue(null); // no request context by default
 });
 
 describe("registryService.stats", () => {
@@ -82,6 +89,20 @@ describe("registryService.record", () => {
       host: "h",
     });
     expect(db.upsert.mock.calls[1][0].create.createdBy).toBe("ci-bot");
+  });
+
+  it("attributes createdBy to the authenticated user when present", async () => {
+    db.upsert.mockResolvedValue({});
+    currentActor.mockResolvedValue("alice@example.com");
+    process.env.PROVISIONED_BY = "ignored";
+    await registryService.record({
+      applicationName: "a",
+      environment: "PRODUCTION",
+      databaseName: "d3",
+      username: "u",
+      host: "h",
+    });
+    expect(db.upsert.mock.calls[0][0].create.createdBy).toBe("alice@example.com");
   });
 });
 

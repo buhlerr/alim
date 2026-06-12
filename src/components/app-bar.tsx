@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, LogOut } from "lucide-react";
 
+import { logoutAction } from "@/app/actions/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BRAND } from "@/lib/brand";
 import {
@@ -202,7 +203,7 @@ function IntegrationsHealthPopover({ children }: { children: React.ReactNode }) 
  * system clock (click to toggle 12h/24h), the real server uptime + a
  * database-backed status pill (both from /api/health), and the day/night toggle.
  */
-export function AppBar() {
+export function AppBar({ user }: { user: string | null }) {
   const now = useNow();
   const health = useHealth();
   const [hour12, setHour12] = React.useState(true); // default to AM/PM
@@ -260,6 +261,19 @@ export function AppBar() {
       </IntegrationsHealthPopover>
 
       <ThemeToggle />
+
+      {user ? (
+        <form action={logoutAction} className="flex items-center">
+          <button
+            type="submit"
+            title={`Signed in as ${user} — sign out`}
+            className="flex items-center gap-1.5 border border-border bg-secondary/40 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+          >
+            <span className="max-w-[10rem] truncate normal-case tracking-normal">{user}</span>
+            <LogOut className="h-3 w-3 shrink-0" />
+          </button>
+        </form>
+      ) : null}
     </header>
   );
 }

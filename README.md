@@ -14,9 +14,11 @@ Cloudflare, orchestrating end-to-end deployments, and moving resources between
 servers. Every action is recorded in an audit log, and credentials are stored
 encrypted.
 
-> **No authentication (v1).** ALIM has no built-in user authentication yet. Run
-> it on a trusted private network and do not expose it directly to the public
-> internet.
+> **Authentication is built in and on by default.** ALIM gates every route
+> behind either a shared password or a reverse-proxy identity (or both). There
+> is no unauthenticated mode. See [Authentication](#authentication) for setup.
+
+![ALIM dashboard](docs/screenshots/dashboard.png)
 
 ---
 
@@ -39,6 +41,9 @@ encrypted.
 - **Registry:** every provisioned database is recorded and listed in a
   searchable table (by application, database, or username) with full details.
 
+![Create a database](docs/screenshots/create.png)
+![Database registry](docs/screenshots/registry.png)
+
 ### SQL Console (`/query`)
 - CodeMirror editor with PostgreSQL syntax highlighting; Execute, Explain,
   Format, and Clear.
@@ -55,23 +60,33 @@ encrypted.
 - **Admin dashboard:** server overview, storage (database and table sizes), and
   performance (active queries, long-running queries, waiting locks).
 
+![SQL Console](docs/screenshots/query.png)
+
 ### Coolify (`/coolify`)
 Create, configure, and deploy applications through the Coolify API: list
 projects and servers, create applications, manage environment variables, and
 trigger deploys.
 
+![Coolify](docs/screenshots/coolify.png)
+
 ### Proxy Hosts (`/npm`)
 Manage Nginx Proxy Manager: proxy hosts, redirections, streams, 404 hosts,
 SSL certificates, and access lists.
 
+![Proxy Hosts](docs/screenshots/npm.png)
+
 ### Cloudflare (`/cloudflare`)
 Manage Cloudflare tunnels and routes, DNS records, and TLS settings.
+
+![Cloudflare](docs/screenshots/cloudflare.png)
 
 ### Deployments (`/deploy`)
 A single guided wizard that stands an application up end to end, orchestrating
 the underlying modules: provision a database, create and deploy a Coolify app,
 create an NPM proxy host, and point Cloudflare DNS at it. Each step is optional
 and gated on whether its module is configured.
+
+![Deployments](docs/screenshots/deploy.png)
 
 ### Migrations (`/migrations`)
 Plan, execute, and track the clone or migration of Coolify resources between
@@ -82,19 +97,27 @@ the source. Progress is tracked per step and is resumable. Clone is a
 non-destructive copy. (Foundation: the workflow, validation, approval gate, and
 job tracking are in place; live provider integrations are being rolled out.)
 
+![Migrations](docs/screenshots/migrations.png)
+
 ### Secrets (`/secrets`)
 An encrypted vault (AES-256-GCM) for API tokens, passwords, connection strings,
 and SSH keys, revealed only through an explicit reveal action.
 
+![Secrets](docs/screenshots/secrets.png)
+
 ### Audit Log (`/audit`)
 An append-only record of every state-changing action across the platform, with
 filters by action, actor, and target.
+
+![Audit Log](docs/screenshots/audit.png)
 
 ### Settings
 Define your own environments (name, color, abbreviation, read-only and
 write-confirm flags), configure each environment's encrypted connection string
 and test it, and store the credentials for Coolify, Nginx Proxy Manager, and
 Cloudflare.
+
+![Settings](docs/screenshots/settings.png)
 
 ### Security
 - Passwords are **never stored** and **never logged**.
@@ -105,6 +128,39 @@ Cloudflare.
 - Admin connection strings and integration tokens are stored encrypted or in
   environment variables and are never sent to the browser (the UI only sees
   masked or derived metadata).
+
+---
+
+## Authentication
+
+Every route is gated by a single middleware choke point (`src/middleware.ts`).
+There is **no unauthenticated mode** — ALIM is secure-by-default. Pick a mode
+with `AUTH_MODE`:
+
+![Sign in](docs/screenshots/login.png)
+
+| Mode | Behaviour |
+| --- | --- |
+| `password` (default) | A single **shared password** gate with a signed, HTTP-only session cookie. The login form takes a username (prefilled `admin`) used purely for **audit attribution** — the password is the one shared credential. |
+| `proxy` | Trust an identity header set by a reverse proxy that has already authenticated the user (Cloudflare Access, Authelia, Authentik, oauth2-proxy, …). No password is used. |
+| `both` | Accept **either** (OR semantics): SSO via the proxy normally, with the shared password as a **break-glass** fallback when the proxy is misconfigured or bypassed. |
+
+The authenticated identity (the proxy email, or the password-session username)
+is recorded as the actor in the **audit log** and as `createdBy` on provisioned
+databases, replacing the old static `PROVISIONED_BY` label.
+
+**Fail-closed:** if a password-bearing mode is configured without
+`AUTH_PASSWORD` and a signing secret (`AUTH_SECRET`, falling back to
+`ENCRYPTION_KEY`), the gate denies every request until it is fixed.
+
+> **Reverse-proxy security caveat.** Header trust is only safe if ALIM is
+> reachable **exclusively** through the proxy; otherwise anyone who can reach
+> the port can forge the identity header. When the port might be directly
+> reachable, set `AUTH_PROXY_SHARED_SECRET` — the proxy must then also send it
+> in the `x-alim-proxy-secret` header, and requests without it are rejected.
+
+See `.env.example` for every `AUTH_*` variable. `/api/health` and the `/login`
+page are the only unauthenticated routes.
 
 ---
 
