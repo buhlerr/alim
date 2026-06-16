@@ -212,7 +212,10 @@ Copy `.env.example` to `.env` and fill in:
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | yes | ALIM's **own** metadata database (registry, settings, audit, migrations). Separate from the servers you provision into. |
-| `ENCRYPTION_KEY` | recommended | 32-byte key (base64 or hex) for the AES-256-GCM encrypted Settings and Secrets store. Required to save integration credentials in the UI. |
+| `AUTH_MODE` | yes | `password` (default), `proxy`, or `both`. See [Authentication](#authentication). |
+| `AUTH_PASSWORD` | with `password`/`both` | The shared sign-in password. **Required in the default mode** — without it the gate fails closed and every request returns `503 {"error":"authentication is misconfigured"}`. |
+| `AUTH_SECRET` | with `password`/`both` | HMAC key that signs session cookies. Falls back to `ENCRYPTION_KEY` when unset, so setting `ENCRYPTION_KEY` satisfies this. Generate with the command below. |
+| `ENCRYPTION_KEY` | recommended | 32-byte key (base64 or hex) for the AES-256-GCM encrypted Settings and Secrets store. Required to save integration credentials in the UI. Also serves as the `AUTH_SECRET` fallback. |
 | `POSTGRES_PROD_URL` | no | Optional legacy fallback admin (superuser) connection string for the original Production environment. Prefer configuring connection strings per environment on the Settings page. |
 | `POSTGRES_STAGING_URL` | no | Optional legacy fallback admin connection string for the original Staging environment. |
 | `POSTGRES_DEV_URL` | no | Optional legacy fallback admin connection string for the original Development environment. |
@@ -300,8 +303,21 @@ metadata database.
    `Dockerfile` and build it.
 2. Provision a **PostgreSQL** resource in Coolify for the app's metadata, or
    bring your own. Set `DATABASE_URL` to its connection string.
-3. Add environment variables: `DATABASE_URL`, `ENCRYPTION_KEY`, and optionally
-   `PROVISIONED_BY` and any legacy `POSTGRES_*_URL` fallbacks.
+3. Add environment variables:
+   - `DATABASE_URL` — the metadata DB connection string.
+   - `AUTH_PASSWORD` — the shared sign-in password. **Required** in the default
+     `password` mode; without it every request returns
+     `503 {"error":"authentication is misconfigured"}`.
+   - `AUTH_SECRET` — signs session cookies. You can skip this if you set
+     `ENCRYPTION_KEY` (it is used as the fallback). Generate either with:
+     `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+   - `ENCRYPTION_KEY` — for the encrypted Settings/Secrets store (and the
+     `AUTH_SECRET` fallback).
+   - Optionally `PROVISIONED_BY` and any legacy `POSTGRES_*_URL` fallbacks.
+
+   For SSO instead of a shared password, set `AUTH_MODE=proxy` (or `both`) and
+   the `AUTH_PROXY_*` variables — see [Authentication](#authentication) and
+   `.env.example`.
 4. Set the health check path to `/api/health`.
 5. Deploy. Migrations run automatically on container start via the entrypoint.
 
