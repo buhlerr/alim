@@ -2,6 +2,7 @@
   "name": "alim",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Aspyre Labs Infrastructure Manager (ALIM): an open-source platform that simplifies infrastructure operations for self-hosted teams, covering database provisioning, a SQL console, Coolify application management, Nginx Proxy Manager, Cloudflare, deployments, and resource migrations.",
   "scripts": {
     "dev": "next dev",
